@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import QRCode from "qrcode";
 import { Toast } from "@/hooks/useToast";
+import { Lock, AlertCircle } from "lucide-react";
 
 interface PosterGeneratorProps {
   showToast: (message: string, type?: Toast["type"]) => void;
@@ -311,7 +312,9 @@ export default function PosterGenerator({ showToast, userEmail, onLoginClick }: 
       <div className="fade-in" style={{ maxWidth: "600px", margin: "64px auto", textAlign: "center" }}>
         <div className="card">
           <div className="card-body" style={{ padding: "48px 32px" }}>
-            <div style={{ fontSize: "56px", marginBottom: "16px" }}>🔒</div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px", color: "var(--accent-blue)" }}>
+              <Lock size={56} />
+            </div>
             <h2 className="modal-title" style={{ fontSize: "22px", marginBottom: "8px" }}>
               Sign In Required
             </h2>
@@ -360,7 +363,10 @@ export default function PosterGenerator({ showToast, userEmail, onLoginClick }: 
                 marginBottom: "20px",
               }}
             >
-              ⚠ Daily limit reached. You have generated {getPosterLimit()} AI backgrounds today. Come back tomorrow!
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                <span>Daily limit reached. You have generated {getPosterLimit()} AI backgrounds today. Come back tomorrow!</span>
+              </div>
             </div>
           )}
 

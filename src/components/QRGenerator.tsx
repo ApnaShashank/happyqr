@@ -4,6 +4,19 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import QRCode from "qrcode";
 import { QRHistoryEntry, QRSettings } from "@/types";
 import { Toast } from "@/hooks/useToast";
+import { 
+  Link as LinkIcon, 
+  FileText, 
+  Mail, 
+  Phone as PhoneIcon, 
+  Wifi as WifiIcon, 
+  User as UserIcon, 
+  File as FileIcon, 
+  Music,
+  Settings,
+  AlertCircle,
+  CheckCircle2
+} from "lucide-react";
 
 interface QRGeneratorProps {
   onGenerate: (entry: QRHistoryEntry) => void;
@@ -13,9 +26,9 @@ interface QRGeneratorProps {
 }
 
 interface CustomQRStyle {
-  moduleType: "squares" | "dots" | "rounded";
-  cornerOuter: "squares" | "rounded" | "circle";
-  cornerInner: "squares" | "rounded" | "circle";
+  moduleType: "squares" | "dots" | "rounded" | "diamonds" | "stars" | "lines";
+  cornerOuter: "squares" | "rounded" | "circle" | "leaf" | "shield" | "flower";
+  cornerInner: "squares" | "rounded" | "circle" | "leaf" | "diamond";
   logoFile: string | null;
   logoScale: number;
   logoPadding: number;
@@ -35,11 +48,35 @@ interface CustomQRStyle {
   gradientDir: "horizontal" | "vertical" | "diagonal";
   isTransparent: boolean;
   bgImageOpacity: number;
-  frameStyle: "none" | "banner-bottom" | "bubble" | "elegant-border";
+  frameStyle: "none" | "banner-bottom" | "banner-top" | "bubble-bottom" | "bubble-top" | "elegant-border" | "corners-only" | "phone-bezel" | "clipboard" | "shopping-bag" | "tag-pendant" | "circular-ring" | "dashed-border" | "double-border" | "book-cover" | "coffee-cup" | "envelope-mail" | "shield-badge" | "ticket-coupon" | "laptop-monitor" | "heart-love" | "star-sparkle" | "gift-box";
   frameColor: string;
   marginSize: number;
   downloadSize: 256 | 512 | 1024 | 2048;
   errorCorrection: "L" | "M" | "Q" | "H";
+}
+
+function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, spikes: number, outerRadius: number, innerRadius: number) {
+  let rot = (Math.PI / 2) * 3;
+  let x = cx;
+  let y = cy;
+  const step = Math.PI / spikes;
+
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - outerRadius);
+  for (let i = 0; i < spikes; i++) {
+    x = cx + Math.cos(rot) * outerRadius;
+    y = cy + Math.sin(rot) * outerRadius;
+    ctx.lineTo(x, y);
+    rot += step;
+
+    x = cx + Math.cos(rot) * innerRadius;
+    y = cy + Math.sin(rot) * innerRadius;
+    ctx.lineTo(x, y);
+    rot += step;
+  }
+  ctx.lineTo(cx, cy - outerRadius);
+  ctx.closePath();
+  ctx.fill();
 }
 
 const defaultStyles: CustomQRStyle = {
@@ -86,6 +123,7 @@ interface DropdownOption {
   label: string;
   icon?: React.ReactNode;
   description?: string;
+  category?: string;
 }
 
 interface CustomDropdownProps {
@@ -116,6 +154,17 @@ function CustomDropdown({ label, value, options, onChange, direction = "down", a
     ? { bottom: "calc(100% + 6px)", top: "auto" }
     : { top: "calc(100% + 6px)", bottom: "auto" };
 
+  // Group options while preserving contiguous category ordering
+  const groups: { category?: string; items: DropdownOption[] }[] = [];
+  options.forEach((opt) => {
+    const lastGroup = groups[groups.length - 1];
+    if (lastGroup && lastGroup.category === opt.category) {
+      lastGroup.items.push(opt);
+    } else {
+      groups.push({ category: opt.category, items: [opt] });
+    }
+  });
+
   return (
     <div className="custom-dropdown-container" ref={dropdownRef}>
       <label className="form-label">{label}</label>
@@ -135,29 +184,38 @@ function CustomDropdown({ label, value, options, onChange, direction = "down", a
         </button>
         {isOpen && (
           <div className={`custom-dropdown-menu ${align === "right" ? "align-right" : ""}`} style={menuStyle}>
-            {options.map((opt) => (
-              <button
-                key={String(opt.value)}
-                type="button"
-                className={`custom-dropdown-item ${opt.value === value ? "selected" : ""}`}
-                onClick={() => {
-                  onChange(opt.value);
-                  setIsOpen(false);
-                }}
-              >
-                <span className="custom-dropdown-item-content">
-                  {opt.icon && <span className="custom-dropdown-icon">{opt.icon}</span>}
-                  <span style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "left" }}>
-                    <span className="custom-dropdown-item-title">{opt.label}</span>
-                    {opt.description && <span className="custom-dropdown-item-desc">{opt.description}</span>}
-                  </span>
-                </span>
-                {opt.value === value && (
-                  <svg className="custom-dropdown-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
+            {groups.map((group, gIdx) => (
+              <div key={group.category || `group-${gIdx}`} className="custom-dropdown-group" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                {group.category && (
+                  <div className="custom-dropdown-group-header">
+                    {group.category}
+                  </div>
                 )}
-              </button>
+                {group.items.map((opt) => (
+                  <button
+                    key={String(opt.value)}
+                    type="button"
+                    className={`custom-dropdown-item ${opt.value === value ? "selected" : ""}`}
+                    onClick={() => {
+                      onChange(opt.value);
+                      setIsOpen(false);
+                    }}
+                  >
+                    <span className="custom-dropdown-item-content">
+                      {opt.icon && <span className="custom-dropdown-icon">{opt.icon}</span>}
+                      <span style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "left" }}>
+                        <span className="custom-dropdown-item-title">{opt.label}</span>
+                        {opt.description && <span className="custom-dropdown-item-desc">{opt.description}</span>}
+                      </span>
+                    </span>
+                    {opt.value === value && (
+                      <svg className="custom-dropdown-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
         )}
@@ -242,7 +300,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
 
   const isLimitReached = !userEmail && getAnonGenCount() >= getAnonLimit();
 
-  // Handle PDF/Audio Uploads using tmpfiles.org
+  // Handle PDF/Audio Uploads using secure backend ImageKit api
   const handleCloudFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "pdf" | "audio") => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -263,16 +321,15 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
       const formData = new FormData();
       formData.append("file", file);
 
-      // Free anonymous upload
-      const res = await fetch("https://tmpfiles.org/api/v1/upload", {
+      // Secure upload to ImageKit
+      const res = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       });
 
       const json = await res.json();
-      if (res.ok && json.data?.url) {
-        // Direct download file link transformation
-        const directUrl = json.data.url.replace("tmpfiles.org/", "tmpfiles.org/dl/");
+      if (res.ok && json.url) {
+        const directUrl = json.url;
         if (type === "pdf") {
           setPdfUrl(directUrl);
           setPdfName(file.name);
@@ -369,14 +426,71 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
 
       if (customStyle.frameStyle === "banner-bottom") {
         extraBottom = baseQRSize * 0.16;
-      } else if (customStyle.frameStyle === "bubble") {
+      } else if (customStyle.frameStyle === "banner-top") {
+        extraTop = baseQRSize * 0.16;
+      } else if (customStyle.frameStyle === "bubble-bottom") {
         extraTop = baseQRSize * 0.04;
-        extraBottom = baseQRSize * 0.16;
+        extraBottom = baseQRSize * 0.18;
         extraLeft = baseQRSize * 0.04;
         extraRight = baseQRSize * 0.04;
-      } else if (customStyle.frameStyle === "elegant-border") {
+      } else if (customStyle.frameStyle === "bubble-top") {
+        extraTop = baseQRSize * 0.18;
+        extraBottom = baseQRSize * 0.04;
+        extraLeft = baseQRSize * 0.04;
+        extraRight = baseQRSize * 0.04;
+      } else if (customStyle.frameStyle === "elegant-border" || customStyle.frameStyle === "corners-only" || customStyle.frameStyle === "dashed-border" || customStyle.frameStyle === "double-border") {
         extraTop = baseQRSize * 0.06;
         extraBottom = baseQRSize * 0.12;
+        extraLeft = baseQRSize * 0.06;
+        extraRight = baseQRSize * 0.06;
+      } else if (customStyle.frameStyle === "phone-bezel") {
+        extraTop = baseQRSize * 0.12;
+        extraBottom = baseQRSize * 0.14;
+        extraLeft = baseQRSize * 0.06;
+        extraRight = baseQRSize * 0.06;
+      } else if (customStyle.frameStyle === "clipboard") {
+        extraTop = baseQRSize * 0.15;
+        extraBottom = baseQRSize * 0.10;
+        extraLeft = baseQRSize * 0.06;
+        extraRight = baseQRSize * 0.06;
+      } else if (customStyle.frameStyle === "shopping-bag") {
+        extraTop = baseQRSize * 0.16;
+        extraBottom = baseQRSize * 0.10;
+        extraLeft = baseQRSize * 0.06;
+        extraRight = baseQRSize * 0.06;
+      } else if (customStyle.frameStyle === "tag-pendant") {
+        extraTop = baseQRSize * 0.16;
+        extraBottom = baseQRSize * 0.10;
+        extraLeft = baseQRSize * 0.08;
+        extraRight = baseQRSize * 0.08;
+      } else if (customStyle.frameStyle === "circular-ring") {
+        extraTop = baseQRSize * 0.10;
+        extraBottom = baseQRSize * 0.16;
+        extraLeft = baseQRSize * 0.10;
+        extraRight = baseQRSize * 0.10;
+      } else if (customStyle.frameStyle === "book-cover") {
+        extraTop = baseQRSize * 0.06;
+        extraBottom = baseQRSize * 0.12;
+        extraLeft = baseQRSize * 0.14;
+        extraRight = baseQRSize * 0.06;
+      } else if (customStyle.frameStyle === "coffee-cup") {
+        extraTop = baseQRSize * 0.08;
+        extraBottom = baseQRSize * 0.10;
+        extraLeft = baseQRSize * 0.06;
+        extraRight = baseQRSize * 0.15;
+      } else if (customStyle.frameStyle === "envelope-mail" || customStyle.frameStyle === "shield-badge" || customStyle.frameStyle === "ticket-coupon" || customStyle.frameStyle === "heart-love" || customStyle.frameStyle === "star-sparkle") {
+        extraTop = baseQRSize * 0.08;
+        extraBottom = baseQRSize * 0.12;
+        extraLeft = baseQRSize * 0.08;
+        extraRight = baseQRSize * 0.08;
+      } else if (customStyle.frameStyle === "laptop-monitor") {
+        extraTop = baseQRSize * 0.08;
+        extraBottom = baseQRSize * 0.16;
+        extraLeft = baseQRSize * 0.08;
+        extraRight = baseQRSize * 0.08;
+      } else if (customStyle.frameStyle === "gift-box") {
+        extraTop = baseQRSize * 0.16;
+        extraBottom = baseQRSize * 0.10;
         extraLeft = baseQRSize * 0.06;
         extraRight = baseQRSize * 0.06;
       }
@@ -489,6 +603,18 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
               ctx.fill();
             } else if (customStyle.moduleType === "rounded") {
               drawRoundedRect(ctx, x, y, cellSize, cellSize, cellSize * 0.28);
+            } else if (customStyle.moduleType === "diamonds") {
+              ctx.beginPath();
+              ctx.moveTo(x + cellSize / 2, y);
+              ctx.lineTo(x + cellSize, y + cellSize / 2);
+              ctx.lineTo(x + cellSize / 2, y + cellSize);
+              ctx.lineTo(x, y + cellSize / 2);
+              ctx.closePath();
+              ctx.fill();
+            } else if (customStyle.moduleType === "stars") {
+              drawStar(ctx, x + cellSize / 2, y + cellSize / 2, 5, cellSize * 0.48, cellSize * 0.2);
+            } else if (customStyle.moduleType === "lines") {
+              ctx.fillRect(x + cellSize * 0.15, y, cellSize * 0.7, cellSize);
             }
           }
         }
@@ -541,6 +667,28 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
           ctx.beginPath();
           ctx.arc(x + size / 2, y + size / 2, size / 2 - cellSize / 2, 0, 2 * Math.PI);
           ctx.stroke();
+        } else if (customStyle.cornerOuter === "leaf") {
+          ctx.beginPath();
+          const r = size - cellSize;
+          ctx.roundRect(x + cellSize / 2, y + cellSize / 2, r, r, [cellSize * 2.5, 0, cellSize * 2.5, 0]);
+          ctx.stroke();
+        } else if (customStyle.cornerOuter === "shield") {
+          const r = size - cellSize;
+          const left = x + cellSize / 2;
+          const top = y + cellSize / 2;
+          ctx.beginPath();
+          ctx.moveTo(left, top + r * 0.3);
+          ctx.quadraticCurveTo(left + r / 2, top, left + r, top + r * 0.3);
+          ctx.lineTo(left + r, top + r * 0.7);
+          ctx.quadraticCurveTo(left + r, top + r, left + r / 2, top + r);
+          ctx.quadraticCurveTo(left, top + r, left, top + r * 0.7);
+          ctx.closePath();
+          ctx.stroke();
+        } else if (customStyle.cornerOuter === "flower") {
+          const r = size - cellSize;
+          ctx.beginPath();
+          ctx.roundRect(x + cellSize / 2, y + cellSize / 2, r, r, [cellSize * 1.5, cellSize * 1.5, cellSize * 1.5, cellSize * 1.5]);
+          ctx.stroke();
         }
 
         ctx.fillStyle = fgStyle;
@@ -556,6 +704,18 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         } else if (customStyle.cornerInner === "circle") {
           ctx.beginPath();
           ctx.arc(x + size / 2, y + size / 2, dotSize / 2, 0, 2 * Math.PI);
+          ctx.fill();
+        } else if (customStyle.cornerInner === "leaf") {
+          ctx.beginPath();
+          ctx.roundRect(x + dotOffset, y + dotOffset, dotSize, dotSize, [cellSize * 1.2, 0, cellSize * 1.2, 0]);
+          ctx.fill();
+        } else if (customStyle.cornerInner === "diamond") {
+          ctx.beginPath();
+          ctx.moveTo(x + size / 2, y + dotOffset);
+          ctx.lineTo(x + dotOffset + dotSize, y + size / 2);
+          ctx.lineTo(x + size / 2, y + dotOffset + dotSize);
+          ctx.lineTo(x + dotOffset, y + size / 2);
+          ctx.closePath();
           ctx.fill();
         }
       });
@@ -583,6 +743,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
 
       if (customStyle.frameStyle !== "none" && customStyle.labelText.trim()) {
         ctx.fillStyle = customStyle.frameColor;
+        ctx.strokeStyle = customStyle.frameColor;
 
         if (customStyle.frameStyle === "banner-bottom") {
           ctx.beginPath();
@@ -594,7 +755,17 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(customStyle.labelText, baseQRSize / 2, baseQRSize + extraBottom / 2);
-        } else if (customStyle.frameStyle === "bubble") {
+        } else if (customStyle.frameStyle === "banner-top") {
+          ctx.beginPath();
+          ctx.roundRect(0, 0, baseQRSize, extraTop, [16, 16, 0, 0]);
+          ctx.fill();
+
+          ctx.fillStyle = customStyle.labelColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, baseQRSize / 2, extraTop / 2);
+        } else if (customStyle.frameStyle === "bubble-bottom") {
           ctx.beginPath();
           ctx.roundRect(4, 4, canvasW - 8, canvasH - 24, 24);
           ctx.fill();
@@ -610,7 +781,24 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
           ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillText(customStyle.labelText, canvasW / 2, baseQRSize + extraTop + extraBottom / 2);
+          ctx.fillText(customStyle.labelText, canvasW / 2, baseQRSize + extraTop + (extraBottom - 20) / 2);
+        } else if (customStyle.frameStyle === "bubble-top") {
+          ctx.beginPath();
+          ctx.roundRect(4, 24, canvasW - 8, canvasH - 28, 24);
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.moveTo(canvasW / 2 + 12, 24);
+          ctx.lineTo(canvasW / 2 - 12, 24);
+          ctx.lineTo(canvasW / 2, 4);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillStyle = customStyle.labelColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, 24 + (extraTop - 24) / 2);
         } else if (customStyle.frameStyle === "elegant-border") {
           ctx.strokeStyle = customStyle.frameColor;
           ctx.lineWidth = 14;
@@ -624,6 +812,350 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 - 7);
+        } else if (customStyle.frameStyle === "corners-only") {
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 8;
+          const len = 40;
+          const pad = 12;
+          
+          ctx.beginPath();
+          ctx.moveTo(pad, pad + len);
+          ctx.lineTo(pad, pad);
+          ctx.lineTo(pad + len, pad);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(canvasW - pad - len, pad);
+          ctx.lineTo(canvasW - pad, pad);
+          ctx.lineTo(canvasW - pad, pad + len);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(pad, canvasH - pad - len);
+          ctx.lineTo(pad, canvasH - pad);
+          ctx.lineTo(pad + len, canvasH - pad);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(canvasW - pad - len, canvasH - pad);
+          ctx.lineTo(canvasW - pad, canvasH - pad);
+          ctx.lineTo(canvasW - pad, canvasH - pad - len);
+          ctx.stroke();
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2);
+        } else if (customStyle.frameStyle === "phone-bezel") {
+          ctx.lineWidth = 14;
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.beginPath();
+          ctx.roundRect(8, 8, canvasW - 16, canvasH - 16, 28);
+          ctx.stroke();
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.beginPath();
+          ctx.roundRect(canvasW / 2 - 40, 15, 80, 10, 5);
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(canvasW / 2, canvasH - 25, 12, 0, 2 * Math.PI);
+          ctx.stroke();
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom + 12);
+        } else if (customStyle.frameStyle === "clipboard") {
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 10;
+          ctx.beginPath();
+          ctx.roundRect(10, 25, canvasW - 20, canvasH - 35, 14);
+          ctx.stroke();
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.beginPath();
+          ctx.roundRect(canvasW / 2 - 35, 5, 70, 25, 6);
+          ctx.fill();
+          
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(canvasW / 2, 12, 4, 0, 2 * Math.PI);
+          ctx.fill();
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 - 5);
+        } else if (customStyle.frameStyle === "shopping-bag") {
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 10;
+          ctx.beginPath();
+          ctx.roundRect(10, extraTop - 10, canvasW - 20, canvasH - extraTop, 12);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(canvasW / 2, extraTop - 10, 35, Math.PI, 0);
+          ctx.stroke();
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 - 5);
+        } else if (customStyle.frameStyle === "tag-pendant") {
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 8;
+          
+          const pad = 12;
+          const topH = extraTop - 10;
+          ctx.beginPath();
+          ctx.moveTo(canvasW / 2, pad);
+          ctx.lineTo(canvasW - pad, topH);
+          ctx.lineTo(canvasW - pad, canvasH - pad);
+          ctx.lineTo(pad, canvasH - pad);
+          ctx.lineTo(pad, topH);
+          ctx.closePath();
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(canvasW / 2, topH - 20, 8, 0, 2 * Math.PI);
+          ctx.stroke();
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 - 5);
+        } else if (customStyle.frameStyle === "circular-ring") {
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 8;
+          ctx.beginPath();
+          ctx.arc(canvasW / 2, canvasH / 2 - 15, Math.min(canvasW, canvasH) / 2 - 15, 0, 2 * Math.PI);
+          ctx.stroke();
+
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(canvasW / 2, canvasH / 2 - 15, Math.min(canvasW, canvasH) / 2 - 25, 0, 2 * Math.PI);
+          ctx.stroke();
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 - 10);
+        } else if (customStyle.frameStyle === "dashed-border") {
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 8;
+          ctx.setLineDash([16, 8]);
+          ctx.strokeRect(10, 10, canvasW - 20, canvasH - 20);
+          ctx.setLineDash([]);
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 - 5);
+        } else if (customStyle.frameStyle === "double-border") {
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 6;
+          ctx.strokeRect(10, 10, canvasW - 20, canvasH - 20);
+          ctx.lineWidth = 2;
+          ctx.strokeRect(18, 18, canvasW - 36, canvasH - 36);
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 - 5);
+        } else if (customStyle.frameStyle === "book-cover") {
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.fillRect(5, 5, extraLeft - 10, canvasH - 10);
+
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 6;
+          ctx.strokeRect(extraLeft - 5, 5, canvasW - extraLeft, canvasH - 10);
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, (canvasW + extraLeft) / 2 - 5, canvasH - extraBottom / 2 - 5);
+        } else if (customStyle.frameStyle === "coffee-cup") {
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 10;
+          ctx.beginPath();
+          ctx.roundRect(10, 10, canvasW - extraRight + 10, canvasH - 20, [4, 4, 30, 30]);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(canvasW - extraRight + 20, canvasH / 2, 30, -Math.PI / 2, Math.PI / 2);
+          ctx.stroke();
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, (canvasW - extraRight) / 2 + 10, canvasH - extraBottom / 2 - 5);
+        } else if (customStyle.frameStyle === "envelope-mail") {
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 8;
+          ctx.strokeRect(10, 10, canvasW - 20, canvasH - 20);
+
+          ctx.beginPath();
+          ctx.moveTo(10, 10);
+          ctx.lineTo(canvasW / 2, canvasH / 2 - 10);
+          ctx.lineTo(canvasW - 10, 10);
+          ctx.stroke();
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 - 5);
+        } else if (customStyle.frameStyle === "shield-badge") {
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 8;
+          const r = canvasW - 20;
+          const left = 10;
+          const top = 10;
+          ctx.beginPath();
+          ctx.moveTo(left, top + r * 0.2);
+          ctx.quadraticCurveTo(left + r / 2, top, left + r, top + r * 0.2);
+          ctx.lineTo(left + r, top + r * 0.7);
+          ctx.quadraticCurveTo(left + r, canvasH - 10, left + r / 2, canvasH - 10);
+          ctx.quadraticCurveTo(left, canvasH - 10, left, top + r * 0.7);
+          ctx.closePath();
+          ctx.stroke();
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 - 5);
+        } else if (customStyle.frameStyle === "ticket-coupon") {
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 8;
+          
+          const pad = 12;
+          const notchY = canvasH / 2;
+          const notchR = 16;
+          
+          ctx.beginPath();
+          ctx.moveTo(pad, pad);
+          ctx.lineTo(canvasW - pad, pad);
+          ctx.lineTo(canvasW - pad, notchY - notchR);
+          ctx.arc(canvasW - pad, notchY, notchR, -Math.PI / 2, Math.PI / 2, true);
+          ctx.lineTo(canvasW - pad, canvasH - pad);
+          ctx.lineTo(pad, canvasH - pad);
+          ctx.lineTo(pad, notchY + notchR);
+          ctx.arc(pad, notchY, notchR, Math.PI / 2, -Math.PI / 2, true);
+          ctx.closePath();
+          ctx.stroke();
+
+          ctx.save();
+          ctx.setLineDash([5, 5]);
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(pad + notchR, canvasH - extraBottom);
+          ctx.lineTo(canvasW - pad - notchR, canvasH - extraBottom);
+          ctx.stroke();
+          ctx.restore();
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2);
+        } else if (customStyle.frameStyle === "laptop-monitor") {
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 10;
+          ctx.strokeRect(15, 15, canvasW - 30, canvasH - extraBottom);
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.beginPath();
+          ctx.moveTo(canvasW / 2 - 50, canvasH - extraBottom + 15);
+          ctx.lineTo(canvasW / 2 - 70, canvasH - 15);
+          ctx.lineTo(canvasW / 2 + 70, canvasH - 15);
+          ctx.lineTo(canvasW / 2 + 50, canvasH - extraBottom + 15);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillRect(20, canvasH - 15, canvasW - 40, 6);
+
+          ctx.fillStyle = customStyle.labelColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom + 10);
+        } else if (customStyle.frameStyle === "heart-love") {
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 8;
+          
+          const pad = 12;
+          const hW = canvasW - 24;
+          const hH = canvasH - 24;
+          
+          ctx.beginPath();
+          ctx.moveTo(canvasW / 2, pad + hH * 0.25);
+          ctx.bezierCurveTo(canvasW / 2 - hW * 0.4, pad, pad, pad + hH * 0.4, canvasW / 2, canvasH - pad);
+          ctx.bezierCurveTo(canvasW - pad, pad + hH * 0.4, canvasW / 2 + hW * 0.4, pad, canvasW / 2, pad + hH * 0.25);
+          ctx.stroke();
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 - 5);
+        } else if (customStyle.frameStyle === "star-sparkle") {
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 6;
+          ctx.strokeRect(15, 15, canvasW - 30, canvasH - 30);
+          
+          const drawStarDecal = (cx: number, cy: number) => {
+            ctx.fillStyle = customStyle.frameColor;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - 12);
+            ctx.quadraticCurveTo(cx, cy, cx + 12, cy);
+            ctx.quadraticCurveTo(cx, cy, cx, cy + 12);
+            ctx.quadraticCurveTo(cx, cy, cx - 12, cy);
+            ctx.quadraticCurveTo(cx, cy, cx, cy - 12);
+            ctx.fill();
+          }
+
+          drawStarDecal(15, 15);
+          drawStarDecal(canvasW - 15, 15);
+          drawStarDecal(15, canvasH - 30);
+          drawStarDecal(canvasW - 15, canvasH - 30);
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 - 5);
+        } else if (customStyle.frameStyle === "gift-box") {
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.lineWidth = 8;
+          ctx.strokeRect(10, extraTop - 5, canvasW - 20, canvasH - extraTop - 5);
+
+          ctx.beginPath();
+          ctx.moveTo(canvasW / 2, extraTop - 5);
+          ctx.lineTo(canvasW / 2, canvasH - 10);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(canvasW / 2 - 20, extraTop - 15, 15, 0, 2 * Math.PI);
+          ctx.arc(canvasW / 2 + 20, extraTop - 15, 15, 0, 2 * Math.PI);
+          ctx.stroke();
+
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 - 5);
         }
       }
 
@@ -842,6 +1374,22 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         <rect x="14" y="14" width="7" height="7" rx="2.5" />
       </svg>
     ),
+    diamond: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2L22 12L12 22L2 12Z" />
+      </svg>
+    ),
+    star: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2L15 9H22L17 14L19 21L12 17L5 21L7 14L2 9H9Z" />
+      </svg>
+    ),
+    lines: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+        <rect x="4" y="2" width="6" height="20" rx="1" />
+        <rect x="14" y="2" width="6" height="20" rx="1" />
+      </svg>
+    ),
     outlineSquare: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
         <rect x="4" y="4" width="16" height="16" rx="1" />
@@ -855,6 +1403,24 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
     outlineCircle: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
         <circle cx="12" cy="12" r="8" />
+      </svg>
+    ),
+    outlineLeaf: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+        <path d="M12 2C6 2 2 6 2 12C2 18 6 22 12 22C18 22 22 18 22 12C22 6 18 2 12 2Z" />
+        <path d="M2 12C2 6 12 2 12 2" />
+        <path d="M12 22C12 22 22 18 22 12" />
+      </svg>
+    ),
+    outlineShield: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      </svg>
+    ),
+    outlineFlower: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+        <circle cx="12" cy="12" r="8" strokeDasharray="3 3" />
+        <rect x="4" y="4" width="16" height="16" rx="3" />
       </svg>
     ),
     arrowUp: (
@@ -917,7 +1483,10 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
               gap: "10px",
             }}
           >
-            <span>⚠ Anonymous limit reached. Sign in for unlimited QR codes!</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <AlertCircle size={16} style={{ flexShrink: 0 }} />
+              Anonymous limit reached. Sign in for unlimited QR codes!
+            </span>
             <button
               className="btn btn-secondary btn-sm"
               onClick={onLoginClick}
@@ -934,7 +1503,10 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
             className={`collapsible-trigger ${openSection === "content" ? "expanded" : ""}`}
             onClick={() => toggleSection("content")}
           >
-            <span>1. Content Input Formats</span>
+            <span style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "left" }}>
+              <span className="collapsible-trigger-title">1. Content & Formats</span>
+              <span className="collapsible-trigger-desc">Choose your input type (URL, WiFi, Contact) or upload PDF/Audio documents to auto-host online.</span>
+            </span>
             <svg className="collapsible-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9" />
             </svg>
@@ -945,25 +1517,25 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
               {/* Content Formats Selector Grid */}
               <div>
                 <label className="form-label">Select QR Format Type</label>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "6px" }}>
+                <div className="format-switcher-grid">
                   {[
-                    { id: "url", label: "🔗 Link" },
-                    { id: "text", label: "💬 Text" },
-                    { id: "email", label: "📧 Email" },
-                    { id: "phone", label: "📞 Phone" },
-                    { id: "wifi", label: "📶 WiFi" },
-                    { id: "vcard", label: "👤 Contact" },
-                    { id: "pdf", label: "📄 PDF File" },
-                    { id: "audio", label: "🎵 Audio" },
+                    { id: "url", label: "Link", icon: <LinkIcon size={20} /> },
+                    { id: "text", label: "Text", icon: <FileText size={20} /> },
+                    { id: "email", label: "Email", icon: <Mail size={20} /> },
+                    { id: "phone", label: "Phone", icon: <PhoneIcon size={20} /> },
+                    { id: "wifi", label: "WiFi", icon: <WifiIcon size={20} /> },
+                    { id: "vcard", label: "Contact", icon: <UserIcon size={20} /> },
+                    { id: "pdf", label: "PDF File", icon: <FileIcon size={20} /> },
+                    { id: "audio", label: "Audio", icon: <Music size={20} /> },
                   ].map((item) => (
                     <button
                       key={item.id}
                       type="button"
-                      className={`preset-chip ${contentType === item.id ? "active" : ""}`}
+                      className={`format-switcher-btn ${contentType === item.id ? "active" : ""}`}
                       onClick={() => setContentType(item.id as any)}
-                      style={{ justifyContent: "center", fontSize: "11px", padding: "6px 4px" }}
                     >
-                      {item.label}
+                      <span className="format-switcher-icon">{item.icon}</span>
+                      <span className="format-switcher-label">{item.label}</span>
                     </button>
                   ))}
                 </div>
@@ -1185,8 +1757,9 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                       </button>
                     </div>
                     {pdfUrl && (
-                      <div style={{ marginTop: 12, fontSize: 12, color: "var(--accent-green)", fontWeight: 600 }}>
-                        ✔ Active: {pdfName || "Document uploaded successfully"}
+                      <div style={{ marginTop: 12, fontSize: 12, color: "var(--accent-green)", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                        <CheckCircle2 size={14} style={{ flexShrink: 0 }} />
+                        Active: {pdfName || "Document uploaded successfully"}
                       </div>
                     )}
                   </div>
@@ -1215,8 +1788,9 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                       </button>
                     </div>
                     {audioUrl && (
-                      <div style={{ marginTop: 12, fontSize: 12, color: "var(--accent-green)", fontWeight: 600 }}>
-                        ✔ Active: {audioName || "Audio track uploaded successfully"}
+                      <div style={{ marginTop: 12, fontSize: 12, color: "var(--accent-green)", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                        <CheckCircle2 size={14} style={{ flexShrink: 0 }} />
+                        Active: {audioName || "Audio track uploaded successfully"}
                       </div>
                     )}
                   </div>
@@ -1227,13 +1801,16 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
           )}
         </div>
 
-        {/* Accordion Section 2: Patterns & Shapes */}
+        {/* Accordion Section 2: Pattern & Shapes */}
         <div className="collapsible-section">
           <button
             className={`collapsible-trigger ${openSection === "shapes" ? "expanded" : ""}`}
             onClick={() => toggleSection("shapes")}
           >
-            <span>2. Pattern & Shapes</span>
+            <span style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "left" }}>
+              <span className="collapsible-trigger-title">2. Pattern & Shapes</span>
+              <span className="collapsible-trigger-desc">Customize the shape of the QR code modules (body pixels) and outer/inner finder corner markers.</span>
+            </span>
             <svg className="collapsible-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9" />
             </svg>
@@ -1246,9 +1823,12 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                 value={customStyle.moduleType}
                 onChange={(val) => setCustomStyle((p) => ({ ...p, moduleType: val }))}
                 options={[
-                  { value: "squares", label: "Classic Squares", icon: icons.square, description: "Standard blocky pixel matrices, best for high scannability." },
-                  { value: "dots", label: "Modern Dots", icon: icons.dot, description: "Sleek circular dot pixels, offers a highly unique and clean design." },
-                  { value: "rounded", label: "Rounded Pixels", icon: icons.rounded, description: "Smooth rounded modules, creates a soft and organic tech layout." },
+                  { value: "squares", label: "Classic Squares", icon: icons.square, description: "Standard blocky pixel matrices, best for high scannability.", category: "Standard Patterns" },
+                  { value: "rounded", label: "Rounded Pixels", icon: icons.rounded, description: "Smooth rounded modules, creates a soft and organic tech layout.", category: "Standard Patterns" },
+                  { value: "dots", label: "Modern Dots", icon: icons.dot, description: "Sleek circular dot pixels, offers a highly unique and clean design.", category: "Sleek & Geometric" },
+                  { value: "diamonds", label: "Reflective Diamonds", icon: icons.diamond, description: "Symmetric diamond pixel modules, creates a luxury tech appearance.", category: "Sleek & Geometric" },
+                  { value: "stars", label: "Star Decals", icon: icons.star, description: "Playful star-shaped modules, excellent for branding and retail.", category: "Artistic Decals" },
+                  { value: "lines", label: "Matrix Stripes", icon: icons.lines, description: "Parallel vertical line segments, delivers a barcode-inspired aesthetic.", category: "Artistic Decals" },
                 ]}
               />
 
@@ -1260,9 +1840,12 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                   onChange={(val) => setCustomStyle((p) => ({ ...p, cornerOuter: val }))}
                   direction="up"
                   options={[
-                    { value: "squares", label: "Sharp Squares", icon: icons.outlineSquare, description: "Classic finder patterns with standard hard right-angled borders." },
-                    { value: "rounded", label: "Rounded Rect", icon: icons.outlineRounded, description: "Modern soft-cornered frames, balances structure with smooth lines." },
-                    { value: "circle", label: "Circular Ring", icon: icons.outlineCircle, description: "Trendy ring-shaped corner finders, gives a premium creative look." },
+                    { value: "squares", label: "Sharp Squares", icon: icons.outlineSquare, description: "Classic finder patterns with standard hard right-angled borders.", category: "Classic Shapes" },
+                    { value: "rounded", label: "Rounded Rect", icon: icons.outlineRounded, description: "Modern soft-cornered frames, balances structure with smooth lines.", category: "Classic Shapes" },
+                    { value: "circle", label: "Circular Ring", icon: icons.outlineCircle, description: "Trendy ring-shaped corner finders, gives a premium creative look.", category: "Classic Shapes" },
+                    { value: "leaf", label: "Organic Leaf", icon: icons.outlineLeaf, description: "Leaf-shaped cutouts, pairs opposite curved and sharp corners.", category: "Creative Outlines" },
+                    { value: "shield", label: "Security Shield", icon: icons.outlineShield, description: "Shield shape outline, adds a formal trust structure to finders.", category: "Creative Outlines" },
+                    { value: "flower", label: "Scalloped Flower", icon: icons.outlineFlower, description: "Flower pedal scalloped outline, ideal for soft playful branding.", category: "Creative Outlines" },
                   ]}
                 />
 
@@ -1274,9 +1857,11 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                   direction="up"
                   align="right"
                   options={[
-                    { value: "squares", label: "Sharp Square Dot", icon: icons.square, description: "Standard solid square block in the center of the corner finders." },
-                    { value: "rounded", label: "Rounded Center Dot", icon: icons.rounded, description: "Smooth solid rounded block, aligns with curved module styles." },
-                    { value: "circle", label: "Circular Center Dot", icon: icons.dot, description: "Solid round sphere center, ideal for circular outer frames." },
+                    { value: "squares", label: "Sharp Square Dot", icon: icons.square, description: "Standard solid square block in the center of the corner finders.", category: "Classic Fills" },
+                    { value: "rounded", label: "Rounded Center Dot", icon: icons.rounded, description: "Smooth solid rounded block, aligns with curved module styles.", category: "Classic Fills" },
+                    { value: "circle", label: "Circular Center Dot", icon: icons.dot, description: "Solid round sphere center, ideal for circular outer frames.", category: "Classic Fills" },
+                    { value: "leaf", label: "Leaf Center Dot", icon: icons.outlineLeaf, description: "Leaf curved center dot matching leaf frame styles.", category: "Creative Shapes" },
+                    { value: "diamond", label: "Diamond Center Dot", icon: icons.diamond, description: "Symmetric diamond center dot, looks premium and sharp.", category: "Creative Shapes" },
                   ]}
                 />
               </div>
@@ -1290,7 +1875,10 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
             className={`collapsible-trigger ${openSection === "colors" ? "expanded" : ""}`}
             onClick={() => toggleSection("colors")}
           >
-            <span>3. Colors & Transparency</span>
+            <span style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "left" }}>
+              <span className="collapsible-trigger-title">3. Colors & Transparency</span>
+              <span className="collapsible-trigger-desc">Set solid colors, linear/radial gradients, custom background colors, or enable alpha transparency.</span>
+            </span>
             <svg className="collapsible-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9" />
             </svg>
@@ -1444,13 +2032,16 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
           )}
         </div>
 
-        {/* Accordion Section 4: Logo & Background Image */}
+        {/* Accordion Section 4: Logo & Background Images */}
         <div className="collapsible-section">
           <button
             className={`collapsible-trigger ${openSection === "logo" ? "expanded" : ""}`}
             onClick={() => toggleSection("logo")}
           >
-            <span>4. Logo & Background Images</span>
+            <span style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "left" }}>
+              <span className="collapsible-trigger-title">4. Logo & Background Images</span>
+              <span className="collapsible-trigger-desc">Embed center branding logos with safe margins, or upload custom background wallpaper images.</span>
+            </span>
             <svg className="collapsible-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9" />
             </svg>
@@ -1593,13 +2184,16 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
           )}
         </div>
 
-        {/* Accordion Section 5: Frames, Labels & Margins */}
+        {/* Accordion Section 5: Frames, Labels & Layout */}
         <div className="collapsible-section">
           <button
             className={`collapsible-trigger ${openSection === "frame" ? "expanded" : ""}`}
             onClick={() => toggleSection("frame")}
           >
-            <span>5. Frames, Labels & Layout</span>
+            <span style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "left" }}>
+              <span className="collapsible-trigger-title">5. Frames, Labels & Layout</span>
+              <span className="collapsible-trigger-desc">Wrap your QR code in 20+ design frame CTAs, adjust quiet zone margins, and configure high-res quality exports.</span>
+            </span>
             <svg className="collapsible-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9" />
             </svg>
@@ -1613,10 +2207,29 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                 value={customStyle.frameStyle}
                 onChange={(val) => setCustomStyle((p) => ({ ...p, frameStyle: val }))}
                 options={[
-                  { value: "none", label: "No Frame Layout", description: "Clean raw QR code matrix, suitable for minimalist designs." },
-                  { value: "banner-bottom", label: "Bottom Text Banner", description: "Encloses the QR code with a colored call-to-action bar at the bottom." },
-                  { value: "bubble", label: "Creative Speech Bubble", description: "Wraps the QR code in an interactive message bubble with a bottom pointer." },
-                  { value: "elegant-border", label: "Elegant Frame Outline", description: "Surrounds the canvas with a thick border outline and a bottom label bar." },
+                  { value: "none", label: "No Frame Layout", description: "Clean raw QR code matrix, suitable for minimalist designs.", category: "Minimalist Style" },
+                  { value: "banner-bottom", label: "Bottom Text Banner", description: "Encloses the QR code with a colored call-to-action bar at the bottom.", category: "Call-to-Action Banners" },
+                  { value: "banner-top", label: "Top Text Banner", description: "Encloses the QR code with a colored call-to-action bar at the top.", category: "Call-to-Action Banners" },
+                  { value: "bubble-bottom", label: "Speech Bubble (Down)", description: "Wraps the QR code in an interactive message bubble with a bottom pointer.", category: "Call-to-Action Banners" },
+                  { value: "bubble-top", label: "Speech Bubble (Up)", description: "Wraps the QR code in an interactive message bubble with a top pointer.", category: "Call-to-Action Banners" },
+                  { value: "elegant-border", label: "Elegant Frame Outline", description: "Surrounds the canvas with a thick border outline and a bottom label bar.", category: "Call-to-Action Banners" },
+                  { value: "corners-only", label: "Camera Corner Brackets", description: "Focus brackets surrounding the QR code corners.", category: "Call-to-Action Banners" },
+                  { value: "phone-bezel", label: "Smartphone Bezel", description: "Encloses the QR code in a mockup smartphone frame.", category: "Device Mockups" },
+                  { value: "clipboard", label: "Office Clipboard", description: "Wraps the QR code in a clipboard holder mockup.", category: "Device Mockups" },
+                  { value: "laptop-monitor", label: "Laptop Screen Monitor", description: "Laptop frame outline with a bottom keyboard stand.", category: "Device Mockups" },
+                  { value: "shopping-bag", label: "Shopping Bag Outline", description: "Creative shopping bag handles enclosing the QR code.", category: "E-Commerce & Retail" },
+                  { value: "tag-pendant", label: "Hanging Price Tag", description: "Pendant tag layout with a string loop at the top.", category: "E-Commerce & Retail" },
+                  { value: "ticket-coupon", label: "Ticket Coupon Voucher", description: "Voucher layout with side ticket notches and perforation lines.", category: "E-Commerce & Retail" },
+                  { value: "gift-box", label: "Surprise Gift Box", description: "Wraps the QR in a gift box with a bow ribbon on top.", category: "E-Commerce & Retail" },
+                  { value: "circular-ring", label: "Circular Badge Frame", description: "Frames the QR code in a double circular ring badge.", category: "Borders & Shapes" },
+                  { value: "dashed-border", label: "Retro Dashed Line", description: "Simple dashed line border wrapping the QR.", category: "Borders & Shapes" },
+                  { value: "double-border", label: "Royal Double Border", description: "Two parallel border lines framing the QR.", category: "Borders & Shapes" },
+                  { value: "heart-love", label: "Romantic Heart Outline", description: "Heart shape outline enclosing the QR code.", category: "Borders & Shapes" },
+                  { value: "star-sparkle", label: "Sparkling Star Border", description: "Outer frame with sparkling star corner decal highlights.", category: "Borders & Shapes" },
+                  { value: "book-cover", label: "Classic Book Cover", description: "Spine and board borders mimicking a book binding.", category: "Thematic Outlines" },
+                  { value: "coffee-cup", label: "Cafe Mug Outline", description: "Mug silhouette outline framing with a right handle.", category: "Thematic Outlines" },
+                  { value: "envelope-mail", label: "Postcard Mail Outline", description: "Envelope layout frame with triangular top flap lines.", category: "Thematic Outlines" },
+                  { value: "shield-badge", label: "Security Shield", description: "Security shield badge contour wrapping the QR.", category: "Thematic Outlines" },
                 ]}
               />
 

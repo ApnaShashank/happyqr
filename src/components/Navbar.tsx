@@ -1,6 +1,7 @@
 "use client";
 
 import { ActiveTab } from "@/app/page";
+import { Settings } from "lucide-react";
 
 interface NavbarProps {
   activeTab: ActiveTab;
@@ -31,10 +32,11 @@ export default function Navbar({
           <button
             className={`btn btn-sm ${activeTab === "admin" ? "btn-primary" : "btn-secondary"}`}
             onClick={() => setActiveTab("admin")}
-            style={{ fontSize: "11px", height: "28px", padding: "0 10px" }}
+            style={{ fontSize: "11px", height: "28px", padding: "0 10px", display: "flex", alignItems: "center", gap: "5px" }}
             id="nav-admin-btn"
           >
-            ⚙ Admin
+            <Settings size={14} />
+            Admin
           </button>
         )}
       </div>

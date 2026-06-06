@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import QRCode from "qrcode";
 import { QRHistoryEntry, QRSettings } from "@/types";
 import { Toast } from "@/hooks/useToast";
+import { AlertTriangle, Download } from "lucide-react";
 
 interface BulkGeneratorProps {
   onGenerate: (entries: QRHistoryEntry[]) => void;
@@ -150,7 +151,10 @@ export default function BulkGenerator({ onGenerate, showToast }: BulkGeneratorPr
               <div className="form-hint">
                 {parsedLines.length} item{parsedLines.length !== 1 ? "s" : ""} detected
                 {parsedLines.length > 100 && (
-                  <span style={{ color: "var(--accent-red)", marginLeft: 8 }}>⚠ Max 100</span>
+                  <span style={{ color: "var(--accent-red)", marginLeft: 8, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <AlertTriangle size={14} />
+                    Max 100
+                  </span>
                 )}
               </div>
             </div>
@@ -318,7 +322,10 @@ export default function BulkGenerator({ onGenerate, showToast }: BulkGeneratorPr
                         a.click();
                       }}
                     >
-                      ↓ PNG
+                      <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <Download size={13} />
+                        PNG
+                      </span>
                     </button>
                   </>
                 ) : item.status === "pending" ? (

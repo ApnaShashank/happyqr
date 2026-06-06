@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { QRHistoryEntry } from "@/types";
 import { Toast } from "@/hooks/useToast";
+import { ShieldAlert } from "lucide-react";
 
 interface AdminPanelProps {
   showToast: (message: string, type?: Toast["type"]) => void;
@@ -71,7 +72,9 @@ export default function AdminPanel({ showToast, userEmail }: AdminPanelProps) {
       <div className="fade-in" style={{ maxWidth: "600px", margin: "64px auto", textAlign: "center" }}>
         <div className="card">
           <div className="card-body" style={{ padding: "48px 32px" }}>
-            <div style={{ fontSize: "56px", marginBottom: "16px" }}>⛔</div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px", color: "var(--accent-red)" }}>
+              <ShieldAlert size={56} />
+            </div>
             <h2 className="modal-title" style={{ fontSize: "22px", marginBottom: "8px" }}>
               Access Denied
             </h2>

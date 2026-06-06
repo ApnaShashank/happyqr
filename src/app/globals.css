@@ -1125,114 +1125,25 @@ html, body {
   transition: all var(--transition);
 }
 
-.user-menu-trigger:hover {
-  border-color: var(--border-default);
-  background: var(--bg-card-hover);
-}
-
-.avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--accent-blue);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-/* ── Poster Art Page & Sizing ── */
-.poster-preview-card {
-  aspect-ratio: 3 / 4;
-  width: 100%;
-  background: #111;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--border-subtle);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-}
-
-.poster-canvas {
-  width: 100%;
-  height: auto;
-  max-height: 100%;
-  object-fit: contain;
-}
-
-/* Perfect sizing rules for QR Preview Canvas box */
-.qr-canvas-wrapper {
-  aspect-ratio: 1 / 1;
-  max-width: 320px;
-  margin: 0 auto;
-  padding: 24px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.qr-canvas-wrapper canvas {
-  width: 100% !important;
-  height: auto !important;
-  aspect-ratio: 1 / 1;
-  display: block;
-}
-
-/* New badge style for active page options */
-.navbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-/* ── Custom Styled Premium Select Dropdowns ── */
-.form-select {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2371717a' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 12px center;
-  background-repeat: no-repeat;
-  background-size: 18px 18px;
-  padding-right: 36px;
-  cursor: pointer;
-}
-
-.form-select:hover {
-  border-color: var(--border-default);
-  background-color: var(--bg-card-hover);
-}
-
-.form-select:focus {
-  border-color: var(--accent-blue);
-  box-shadow: var(--shadow-focus);
-}
-
 /* ── Collapsible Panel Accordion ── */
 .collapsible-section {
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--bg-input);
-  margin-bottom: 12px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  margin-bottom: 16px;
   overflow: visible;
-  transition: border-color var(--transition);
+  transition: all var(--transition-slow);
+  box-shadow: var(--shadow-sm);
 }
 
 .collapsible-section:hover {
   border-color: var(--border-default);
+  box-shadow: var(--shadow-md);
 }
 
 .collapsible-trigger {
   width: 100%;
-  padding: 14px 18px;
+  padding: 20px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1241,23 +1152,46 @@ html, body {
   cursor: pointer;
   color: var(--text-primary);
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   text-align: left;
   transition: background var(--transition);
+  border-radius: var(--radius-lg);
 }
 
 .collapsible-trigger:hover {
   background: var(--bg-card-hover);
 }
 
-.collapsible-trigger-chevron {
-  width: 16px;
-  height: 16px;
+.collapsible-trigger-title {
+  font-size: 14.5px;
+  font-weight: 750;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  letter-spacing: 0.6px;
+}
+
+.collapsible-trigger-desc {
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: none;
   color: var(--text-secondary);
-  transition: transform var(--transition);
+  margin-top: 5px;
+  line-height: 1.5;
+}
+
+.collapsible-trigger-chevron {
+  width: 18px;
+  height: 18px;
+  color: var(--text-secondary);
+  transition: transform var(--transition-slow);
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.collapsible-trigger.expanded {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-left: 3px solid var(--accent-blue);
+  padding-left: 21px; /* 24px - 3px */
 }
 
 .collapsible-trigger.expanded .collapsible-trigger-chevron {
@@ -1265,15 +1199,80 @@ html, body {
 }
 
 .collapsible-content {
-  padding: 18px;
+  padding: 24px;
   background: var(--bg-card);
   border-top: 1px solid var(--border-subtle);
-  animation: slideDown 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  animation: slideDown 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Content Formats Switcher Grid ── */
+.format-switcher-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+@media (max-width: 600px) {
+  .format-switcher-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.format-switcher-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+}
+
+.format-switcher-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.format-switcher-btn.active {
+  background: var(--accent-blue-muted);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  box-shadow: 0 0 0 1.5px var(--accent-blue);
+}
+
+.format-switcher-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  transition: transform var(--transition);
+}
+
+.format-switcher-btn:hover .format-switcher-icon {
+  transform: translateY(-2px);
+}
+
+.format-switcher-label {
+  font-size: 11px;
+  font-weight: 650;
 }
 
 /* ── Custom Dropdown Styling ── */
@@ -1291,15 +1290,15 @@ html, body {
 
 .custom-dropdown-trigger {
   width: 100%;
-  height: 42px;
-  padding: 0 14px;
+  height: 44px;
+  padding: 0 16px;
   background: var(--bg-input);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-family: var(--font-sans);
   font-size: 13.5px;
-  font-weight: 500;
+  font-weight: 550;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1316,7 +1315,8 @@ html, body {
 .custom-dropdown-trigger:focus,
 .custom-dropdown-trigger.open {
   border-color: var(--accent-blue);
-  box-shadow: var(--shadow-focus);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+  background: var(--bg-card-hover);
 }
 
 .custom-dropdown-trigger-content {
@@ -1346,23 +1346,27 @@ html, body {
 
 .custom-dropdown-menu {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   left: 0;
-  width: max(100%, 320px);
-  background: var(--bg-card);
+  width: max(100%, 340px);
+  background: rgba(24, 24, 28, 0.92);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   z-index: 200;
-  max-height: 300px;
+  max-height: 320px;
   overflow-y: auto;
-  padding: 6px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  animation: dropdownFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  animation: dropdownFadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+[data-theme="light"] .custom-dropdown-menu {
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .custom-dropdown-menu.align-right {
@@ -1377,7 +1381,7 @@ html, body {
 
 .custom-dropdown-item {
   width: 100%;
-  padding: 10px 14px;
+  padding: 12px 14px;
   border-radius: var(--radius-md);
   background: none;
   border: none;
@@ -1391,8 +1395,12 @@ html, body {
 }
 
 .custom-dropdown-item:hover {
-  background: var(--bg-input);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
+}
+
+[data-theme="light"] .custom-dropdown-item:hover {
+  background: rgba(0, 0, 0, 0.03);
 }
 
 .custom-dropdown-item.selected {
@@ -1433,6 +1441,33 @@ html, body {
   color: var(--accent-blue);
   flex-shrink: 0;
   margin-left: 8px;
+}
+
+.custom-dropdown-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.custom-dropdown-group-header {
+  font-size: 10.5px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--accent-blue);
+  opacity: 0.85;
+  padding: 10px 12px 6px 12px;
+  user-select: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.custom-dropdown-group:first-of-type .custom-dropdown-group-header {
+  border-top: none;
+  padding-top: 4px;
+}
+
+[data-theme="light"] .custom-dropdown-group-header {
+  border-top-color: rgba(0, 0, 0, 0.05);
 }
 
 /* ── Transparency Checkerboard Background ── */
