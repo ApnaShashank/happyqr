@@ -1,6 +1,7 @@
 "use client";
 
 import { ActiveTab } from "@/app/page";
+import { QrCode, FileStack, Sparkles, History } from "lucide-react";
 
 interface HeroProps {
   activeTab: ActiveTab;
@@ -12,44 +13,22 @@ const tabs = [
   {
     id: "generate" as ActiveTab,
     label: "QR Generator",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
-        <path d="M14 14h.01M14 17h.01M17 14h.01M17 17h.01M17 20h.01M20 14h.01M20 17h.01M20 20h.01" />
-      </svg>
-    ),
+    icon: <QrCode size={16} />,
   },
-
   {
     id: "bulk" as ActiveTab,
     label: "Bulk Generate",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" />
-        <path d="M16 8H8M16 12H8M12 16H8" />
-      </svg>
-    ),
+    icon: <FileStack size={16} />,
   },
   {
     id: "poster" as ActiveTab,
     label: "Poster Art",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <circle cx="8.5" cy="8.5" r="1.5" />
-        <path d="M21 15l-5-5L5 21" />
-      </svg>
-    ),
+    icon: <Sparkles size={16} />,
   },
   {
     id: "history" as ActiveTab,
     label: "History",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <polyline points="12 6 12 12 16 14" />
-      </svg>
-    ),
+    icon: <History size={16} />,
   },
 ];
 
@@ -127,19 +106,19 @@ export default function Hero({ activeTab, setActiveTab, totalGenerated }: HeroPr
         <div className="stats-bar">
           <div className="stat-item">
             <span className="stat-value">{totalGenerated}</span>
-            <span className="stat-label">QRs Generated</span>
+            <span className="stat-label">QRs Created Local</span>
           </div>
           <div className="stat-item">
-            <span className="stat-value">PNG</span>
-            <span className="stat-label">Download Format</span>
+            <span className="stat-value">Cloud Live</span>
+            <span className="stat-label">Audio & PDF Hosting</span>
           </div>
           <div className="stat-item">
-            <span className="stat-value">SVG</span>
-            <span className="stat-label">Vector Format</span>
+            <span className="stat-value">Print Ready</span>
+            <span className="stat-label">SVG Vector & 300 DPI</span>
           </div>
           <div className="stat-item">
-            <span className="stat-value">H</span>
-            <span className="stat-label">Error Correction</span>
+            <span className="stat-value">Level H</span>
+            <span className="stat-label">30% Damage Recovery</span>
           </div>
         </div>
       )}

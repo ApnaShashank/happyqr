@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { ActiveTab } from "@/app/page";
 import { Settings } from "lucide-react";
 
@@ -23,11 +24,34 @@ export default function Navbar({
   onLogout,
 }: NavbarProps) {
   const isAdmin = userEmail === "shashank8808108802@gmail.com";
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
 
   return (
     <nav className="navbar">
-      {/* Left side actions (or empty spacer to balance layout) */}
-      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      {/* Left side actions (logo + optional Admin button) */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div
+          style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+          onClick={() => setActiveTab("generate")}
+        >
+          <img
+            src="/logo.png"
+            alt="HappyQR Logo"
+            style={{ height: "36px", width: "auto", objectFit: "contain" }}
+          />
+        </div>
         {isAdmin && (
           <button
             className={`btn btn-sm ${activeTab === "admin" ? "btn-primary" : "btn-secondary"}`}
@@ -41,25 +65,17 @@ export default function Navbar({
         )}
       </div>
 
-      {/* Absolutely centered Logo + Website Name */}
+      {/* Absolutely centered Website Name */}
       <div
         className="navbar-brand-centered"
         style={{
           position: "absolute",
           left: "50%",
           transform: "translateX(-50%)",
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
           cursor: "pointer",
         }}
         onClick={() => setActiveTab("generate")}
       >
-        <img
-          src="/logo.png"
-          alt="HappyQR Logo"
-          style={{ height: "36px", width: "auto", objectFit: "contain" }}
-        />
         <span
           style={{
             fontSize: "19px",
@@ -102,22 +118,36 @@ export default function Navbar({
 
         {/* User Session buttons */}
         {userEmail ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div className="user-menu-trigger" style={{ padding: "4px 8px" }}>
-              <div className="avatar" style={{ width: "20px", height: "20px", fontSize: "10px" }}>
-                {userEmail[0].toUpperCase()}
-              </div>
-              <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-primary)" }}>
-                {userEmail.split("@")[0].slice(0, 10)}
-              </span>
-            </div>
+          <div style={{ position: "relative" }} ref={menuRef}>
             <button
-              className="btn btn-ghost btn-sm"
-              onClick={onLogout}
-              style={{ color: "var(--accent-red)", padding: "0 6px", fontSize: "11px" }}
+              className="user-menu-avatar-btn"
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              title={userEmail}
             >
-              Sign Out
+              {userEmail[0].toUpperCase()}
             </button>
+            {showUserMenu && (
+              <div className="user-dropdown-menu">
+                <div className="user-dropdown-header">
+                  <span className="user-dropdown-email">{userEmail}</span>
+                </div>
+                <div className="user-dropdown-divider" />
+                <button
+                  className="user-dropdown-item logout-btn"
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    onLogout();
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: 6 }}>
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                  Sign Out
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <button

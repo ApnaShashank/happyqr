@@ -15,8 +15,14 @@ import {
   Music,
   Settings,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Layers,
+  Shapes,
+  Palette,
+  Image as ImageIcon,
+  Frame
 } from "lucide-react";
+
 
 interface QRGeneratorProps {
   onGenerate: (entry: QRHistoryEntry) => void;
@@ -238,6 +244,9 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
 
   // Content formats inputs states
   const [contentType, setContentType] = useState<"url" | "text" | "email" | "phone" | "wifi" | "vcard" | "pdf" | "audio">("url");
+
+  // Logo backing shape
+  const [logoShape, setLogoShape] = useState<"square" | "rounded" | "circle">("square");
   const [urlVal, setUrlVal] = useState("https://happyqr.vercel.app");
   const [textVal, setTextVal] = useState("Hello from HappyQR!");
   
@@ -1266,6 +1275,36 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
     if (/^#[0-9a-fA-F]{6}$/.test(val)) setSettings((p) => ({ ...p, bgColor: val }));
   };
 
+  const handleSwapColors = () => {
+    const prevFg = settings.fgColor;
+    const prevBg = settings.bgColor;
+    setSettings((p) => ({ ...p, fgColor: prevBg, bgColor: prevFg }));
+    setFgHex(prevBg);
+    setBgHex(prevFg);
+  };
+
+  const colorPresets = [
+    "#000000", "#ffffff", "#7c3aed", "#2563eb", "#0891b2",
+    "#059669", "#d97706", "#dc2626", "#db2777", "#a855f7",
+    "#1e293b", "#374151"
+  ];
+
+
+  const handleColorPreset = (color: string) => {
+    setSettings((p) => ({ ...p, fgColor: color }));
+    setFgHex(color);
+  };
+
+  const handleCopyText = async () => {
+    if (!text.trim()) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast("Content copied to clipboard!", "success");
+    } catch {
+      showToast("Could not copy text.", "error");
+    }
+  };
+
   const handleDownloadPNG = () => {
     if (isLimitReached) {
       showToast("Anon limit reached. Please Login to generate unlimited QR codes.", "error");
@@ -1348,8 +1387,425 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
     onGenerate(entry);
   };
 
+  // ── Shape Picker Data ──
+  const moduleShapes: { value: CustomQRStyle["moduleType"]; label: string; preview: React.ReactNode }[] = [
+    {
+      value: "squares", label: "Squares",
+      preview: (
+        <svg width="42" height="42" viewBox="0 0 42 42" fill="currentColor">
+          <rect x="2" y="2" width="8" height="8" rx="0.5"/><rect x="12" y="2" width="8" height="8" rx="0.5"/><rect x="22" y="2" width="8" height="8" rx="0.5"/><rect x="32" y="2" width="8" height="8" rx="0.5"/>
+          <rect x="2" y="12" width="8" height="8" rx="0.5"/><rect x="22" y="12" width="8" height="8" rx="0.5"/>
+          <rect x="2" y="22" width="8" height="8" rx="0.5"/><rect x="12" y="22" width="8" height="8" rx="0.5"/><rect x="32" y="22" width="8" height="8" rx="0.5"/>
+          <rect x="12" y="32" width="8" height="8" rx="0.5"/><rect x="22" y="32" width="8" height="8" rx="0.5"/><rect x="32" y="32" width="8" height="8" rx="0.5"/>
+        </svg>
+      ),
+    },
+    {
+      value: "rounded", label: "Rounded",
+      preview: (
+        <svg width="42" height="42" viewBox="0 0 42 42" fill="currentColor">
+          <rect x="2" y="2" width="8" height="8" rx="3"/><rect x="12" y="2" width="8" height="8" rx="3"/><rect x="22" y="2" width="8" height="8" rx="3"/><rect x="32" y="2" width="8" height="8" rx="3"/>
+          <rect x="2" y="12" width="8" height="8" rx="3"/><rect x="22" y="12" width="8" height="8" rx="3"/>
+          <rect x="2" y="22" width="8" height="8" rx="3"/><rect x="12" y="22" width="8" height="8" rx="3"/><rect x="32" y="22" width="8" height="8" rx="3"/>
+          <rect x="12" y="32" width="8" height="8" rx="3"/><rect x="22" y="32" width="8" height="8" rx="3"/><rect x="32" y="32" width="8" height="8" rx="3"/>
+        </svg>
+      ),
+    },
+    {
+      value: "dots", label: "Dots",
+      preview: (
+        <svg width="42" height="42" viewBox="0 0 42 42" fill="currentColor">
+          <circle cx="6" cy="6" r="4"/><circle cx="16" cy="6" r="4"/><circle cx="26" cy="6" r="4"/><circle cx="36" cy="6" r="4"/>
+          <circle cx="6" cy="16" r="4"/><circle cx="26" cy="16" r="4"/>
+          <circle cx="6" cy="26" r="4"/><circle cx="16" cy="26" r="4"/><circle cx="36" cy="26" r="4"/>
+          <circle cx="16" cy="36" r="4"/><circle cx="26" cy="36" r="4"/><circle cx="36" cy="36" r="4"/>
+        </svg>
+      ),
+    },
+    {
+      value: "diamonds", label: "Diamonds",
+      preview: (
+        <svg width="42" height="42" viewBox="0 0 42 42" fill="currentColor">
+          <path d="M6 2L10 6L6 10L2 6Z"/><path d="M16 2L20 6L16 10L12 6Z"/><path d="M26 2L30 6L26 10L22 6Z"/><path d="M36 2L40 6L36 10L32 6Z"/>
+          <path d="M6 12L10 16L6 20L2 16Z"/><path d="M26 12L30 16L26 20L22 16Z"/>
+          <path d="M6 22L10 26L6 30L2 26Z"/><path d="M16 22L20 26L16 30L12 26Z"/><path d="M36 22L40 26L36 30L32 26Z"/>
+          <path d="M16 32L20 36L16 40L12 36Z"/><path d="M26 32L30 36L26 40L22 36Z"/>
+        </svg>
+      ),
+    },
+    {
+      value: "stars", label: "Stars",
+      preview: (
+        <svg width="42" height="42" viewBox="0 0 42 42" fill="currentColor">
+          <path d="M6 2L7 5H10L8 7L9 10L6 8L3 10L4 7L2 5H5Z"/>
+          <path d="M16 2L17 5H20L18 7L19 10L16 8L13 10L14 7L12 5H15Z"/>
+          <path d="M26 2L27 5H30L28 7L29 10L26 8L23 10L24 7L22 5H25Z"/>
+          <path d="M6 22L7 25H10L8 27L9 30L6 28L3 30L4 27L2 25H5Z"/>
+          <path d="M36 22L37 25H40L38 27L39 30L36 28L33 30L34 27L32 25H35Z"/>
+          <path d="M16 32L17 35H20L18 37L19 40L16 38L13 40L14 37L12 35H15Z"/>
+          <path d="M36 2L37 5H40L38 7L39 10L36 8L33 10L34 7L32 5H35Z"/>
+        </svg>
+      ),
+    },
+    {
+      value: "lines", label: "Stripes",
+      preview: (
+        <svg width="42" height="42" viewBox="0 0 42 42" fill="currentColor">
+          <rect x="2" y="2" width="7" height="38" rx="1.5"/>
+          <rect x="13" y="2" width="7" height="38" rx="1.5"/>
+          <rect x="24" y="2" width="7" height="38" rx="1.5"/>
+          <rect x="35" y="2" width="7" height="38" rx="1.5"/>
+        </svg>
+      ),
+    },
+  ];
+
+  const outerShapes: { value: CustomQRStyle["cornerOuter"]; label: string; preview: React.ReactNode }[] = [
+    {
+      value: "squares", label: "Sharp",
+      preview: (
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="none" stroke="currentColor" strokeWidth="3">
+          <rect x="4" y="4" width="30" height="30" rx="1"/>
+          <rect x="9" y="9" width="20" height="20" rx="1"/>
+        </svg>
+      ),
+    },
+    {
+      value: "rounded", label: "Rounded",
+      preview: (
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="none" stroke="currentColor" strokeWidth="3">
+          <rect x="4" y="4" width="30" height="30" rx="7"/>
+          <rect x="9" y="9" width="20" height="20" rx="4"/>
+        </svg>
+      ),
+    },
+    {
+      value: "circle", label: "Circle",
+      preview: (
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="none" stroke="currentColor" strokeWidth="3">
+          <circle cx="19" cy="19" r="15"/>
+          <circle cx="19" cy="19" r="10"/>
+        </svg>
+      ),
+    },
+    {
+      value: "leaf", label: "Leaf",
+      preview: (
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="none" stroke="currentColor" strokeWidth="3">
+          <path d="M4 4 Q4 34 34 34 Q34 4 4 4Z"/>
+          <path d="M10 10 Q10 28 28 28 Q28 10 10 10Z"/>
+        </svg>
+      ),
+    },
+    {
+      value: "shield", label: "Shield",
+      preview: (
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="none" stroke="currentColor" strokeWidth="3">
+          <path d="M19 4L4 10V22C4 30 19 36 19 36C19 36 34 30 34 22V10Z"/>
+        </svg>
+      ),
+    },
+    {
+      value: "flower", label: "Flower",
+      preview: (
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="none" stroke="currentColor" strokeWidth="3">
+          <path d="M19 4Q26 4 34 12Q34 26 19 34Q4 26 4 12Q12 4 19 4Z"/>
+        </svg>
+      ),
+    },
+  ];
+
+  const innerDots: { value: CustomQRStyle["cornerInner"]; label: string; preview: React.ReactNode }[] = [
+    {
+      value: "squares", label: "Square",
+      preview: (
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="currentColor">
+          <rect x="9" y="9" width="20" height="20" rx="1"/>
+        </svg>
+      ),
+    },
+    {
+      value: "rounded", label: "Rounded",
+      preview: (
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="currentColor">
+          <rect x="9" y="9" width="20" height="20" rx="5"/>
+        </svg>
+      ),
+    },
+    {
+      value: "circle", label: "Circle",
+      preview: (
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="currentColor">
+          <circle cx="19" cy="19" r="10"/>
+        </svg>
+      ),
+    },
+    {
+      value: "leaf", label: "Leaf",
+      preview: (
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="currentColor">
+          <path d="M9 9 Q9 29 29 29 Q29 9 9 9Z"/>
+        </svg>
+      ),
+    },
+    {
+      value: "diamond", label: "Diamond",
+      preview: (
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="currentColor">
+          <path d="M19 8L30 19L19 30L8 19Z"/>
+        </svg>
+      ),
+    },
+  ];
+
+  // ── Frame Picker Data ──
+  type FrameValue = CustomQRStyle["frameStyle"];
+  const frameCategories: { category: string; frames: { value: FrameValue; label: string; preview: React.ReactNode }[] }[] = [
+    {
+      category: "Minimalist",
+      frames: [
+        {
+          value: "none", label: "No Frame",
+          preview: (
+            <svg width="50" height="50" viewBox="0 0 50 50" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.5">
+              <rect x="8" y="8" width="34" height="34" rx="2" strokeDasharray="3 3"/>
+            </svg>
+          ),
+        },
+      ],
+    },
+    {
+      category: "Banners & Bubbles",
+      frames: [
+        {
+          value: "banner-bottom", label: "Bottom Banner",
+          preview: (
+            <svg width="50" height="58" viewBox="0 0 50 58" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="4" y="4" width="42" height="42" rx="3"/>
+              <rect x="4" y="49" width="42" height="7" rx="2" fill="currentColor" fillOpacity="0.15"/>
+            </svg>
+          ),
+        },
+        {
+          value: "banner-top", label: "Top Banner",
+          preview: (
+            <svg width="50" height="58" viewBox="0 0 50 58" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="4" y="2" width="42" height="7" rx="2" fill="currentColor" fillOpacity="0.15"/>
+              <rect x="4" y="12" width="42" height="42" rx="3"/>
+            </svg>
+          ),
+        },
+        {
+          value: "bubble-bottom", label: "Bubble Down",
+          preview: (
+            <svg width="50" height="60" viewBox="0 0 50 60" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="4" y="4" width="42" height="42" rx="6"/>
+              <path d="M20 46L25 56L30 46Z" fill="currentColor" fillOpacity="0.2"/>
+            </svg>
+          ),
+        },
+        {
+          value: "bubble-top", label: "Bubble Up",
+          preview: (
+            <svg width="50" height="60" viewBox="0 0 50 60" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M20 12L25 2L30 12Z" fill="currentColor" fillOpacity="0.2"/>
+              <rect x="4" y="12" width="42" height="42" rx="6"/>
+            </svg>
+          ),
+        },
+        {
+          value: "elegant-border", label: "Elegant",
+          preview: (
+            <svg width="50" height="58" viewBox="0 0 50 58" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="3" y="3" width="44" height="44" rx="2" strokeWidth="3"/>
+              <rect x="3" y="49" width="44" height="7" rx="2" fill="currentColor" fillOpacity="0.15"/>
+            </svg>
+          ),
+        },
+        {
+          value: "corners-only", label: "Brackets",
+          preview: (
+            <svg width="50" height="50" viewBox="0 0 50 50" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M4 16V4H16"/><path d="M34 4H46V16"/>
+              <path d="M4 34V46H16"/><path d="M34 46H46V34"/>
+            </svg>
+          ),
+        },
+      ],
+    },
+    {
+      category: "Device Mockups",
+      frames: [
+        {
+          value: "phone-bezel", label: "Phone",
+          preview: (
+            <svg width="44" height="62" viewBox="0 0 44 62" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="4" y="4" width="36" height="54" rx="6"/>
+              <line x1="18" y1="7.5" x2="26" y2="7.5" strokeWidth="2" strokeLinecap="round"/>
+              <circle cx="22" cy="57" r="2.5"/>
+            </svg>
+          ),
+        },
+        {
+          value: "clipboard", label: "Clipboard",
+          preview: (
+            <svg width="48" height="58" viewBox="0 0 48 58" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="4" y="8" width="40" height="46" rx="3"/>
+              <rect x="16" y="4" width="16" height="8" rx="2"/>
+              <line x1="16" y1="8" x2="32" y2="8" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+          ),
+        },
+        {
+          value: "laptop-monitor", label: "Laptop",
+          preview: (
+            <svg width="56" height="50" viewBox="0 0 56 50" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="8" y="4" width="40" height="30" rx="3"/>
+              <path d="M2 36H54L50 46H6Z"/>
+            </svg>
+          ),
+        },
+      ],
+    },
+    {
+      category: "E-Commerce",
+      frames: [
+        {
+          value: "shopping-bag", label: "Shop Bag",
+          preview: (
+            <svg width="50" height="58" viewBox="0 0 50 58" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M8 16H42L38 54H12Z"/>
+              <path d="M18 16C18 10 20 6 25 6C30 6 32 10 32 16"/>
+            </svg>
+          ),
+        },
+        {
+          value: "tag-pendant", label: "Price Tag",
+          preview: (
+            <svg width="46" height="60" viewBox="0 0 46 60" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="23" cy="6" r="4"/>
+              <rect x="4" y="10" width="38" height="46" rx="5"/>
+              <line x1="23" y1="6" x2="23" y2="10"/>
+            </svg>
+          ),
+        },
+        {
+          value: "ticket-coupon", label: "Coupon",
+          preview: (
+            <svg width="60" height="42" viewBox="0 0 60 42" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="4" y="4" width="52" height="34" rx="3"/>
+              <circle cx="4" cy="21" r="5" fill="var(--bg-card)"/>
+              <circle cx="56" cy="21" r="5" fill="var(--bg-card)"/>
+              <line x1="30" y1="4" x2="30" y2="38" strokeDasharray="3 3"/>
+            </svg>
+          ),
+        },
+        {
+          value: "gift-box", label: "Gift Box",
+          preview: (
+            <svg width="50" height="58" viewBox="0 0 50 58" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="4" y="16" width="42" height="38" rx="3"/>
+              <rect x="4" y="8" width="42" height="10" rx="2" fill="currentColor" fillOpacity="0.12"/>
+              <path d="M25 8C25 8 20 2 17 4C14 6 16 8 25 8"/>
+              <path d="M25 8C25 8 30 2 33 4C36 6 34 8 25 8"/>
+              <line x1="25" y1="8" x2="25" y2="54"/>
+            </svg>
+          ),
+        },
+      ],
+    },
+    {
+      category: "Borders & Shapes",
+      frames: [
+        {
+          value: "circular-ring", label: "Ring",
+          preview: (
+            <svg width="52" height="52" viewBox="0 0 52 52" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="26" cy="26" r="22"/>
+              <circle cx="26" cy="26" r="17"/>
+            </svg>
+          ),
+        },
+        {
+          value: "dashed-border", label: "Dashed",
+          preview: (
+            <svg width="50" height="50" viewBox="0 0 50 50" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="4" y="4" width="42" height="42" rx="2" strokeDasharray="4 3"/>
+            </svg>
+          ),
+        },
+        {
+          value: "double-border", label: "Double",
+          preview: (
+            <svg width="50" height="50" viewBox="0 0 50 50" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="3" y="3" width="44" height="44" rx="2"/>
+              <rect x="7" y="7" width="36" height="36" rx="1"/>
+            </svg>
+          ),
+        },
+        {
+          value: "heart-love", label: "Heart",
+          preview: (
+            <svg width="52" height="50" viewBox="0 0 52 50" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M26 44C26 44 4 30 4 16C4 8 10 4 16 6C20 7 24 10 26 14C28 10 32 7 36 6C42 4 48 8 48 16C48 30 26 44 26 44Z"/>
+            </svg>
+          ),
+        },
+        {
+          value: "star-sparkle", label: "Star",
+          preview: (
+            <svg width="52" height="52" viewBox="0 0 52 52" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M26 4L30 18H44L33 27L37 41L26 32L15 41L19 27L8 18H22Z"/>
+            </svg>
+          ),
+        },
+      ],
+    },
+    {
+      category: "Thematic",
+      frames: [
+        {
+          value: "book-cover", label: "Book",
+          preview: (
+            <svg width="46" height="56" viewBox="0 0 46 56" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="8" y="4" width="34" height="48" rx="2"/>
+              <rect x="4" y="4" width="6" height="48" rx="1" fill="currentColor" fillOpacity="0.12"/>
+            </svg>
+          ),
+        },
+        {
+          value: "coffee-cup", label: "Mug",
+          preview: (
+            <svg width="52" height="54" viewBox="0 0 52 54" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M8 8H38L34 50H12Z"/>
+              <path d="M38 16C38 16 46 16 46 24C46 32 38 32 38 32"/>
+            </svg>
+          ),
+        },
+        {
+          value: "envelope-mail", label: "Envelope",
+          preview: (
+            <svg width="56" height="44" viewBox="0 0 56 44" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="4" y="4" width="48" height="36" rx="3"/>
+              <path d="M4 8L28 24L52 8"/>
+            </svg>
+          ),
+        },
+        {
+          value: "shield-badge", label: "Shield",
+          preview: (
+            <svg width="50" height="58" viewBox="0 0 50 58" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M25 4L4 12V28C4 42 25 54 25 54C25 54 46 42 46 28V12Z"/>
+            </svg>
+          ),
+        },
+      ],
+    },
+  ];
+
   // Pre-drawn Option Icons
   const icons = {
+
     square: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
         <rect x="3" y="3" width="7" height="7" rx="0.5" />
@@ -1461,6 +1917,36 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
     ),
   };
 
+  const contentStatus = 
+    contentType === "url" ? "Link" :
+    contentType === "text" ? "Text" :
+    contentType === "email" ? "Email" :
+    contentType === "phone" ? "Phone" :
+    contentType === "wifi" ? "WiFi" :
+    contentType === "vcard" ? "Contact" :
+    contentType === "pdf" ? "PDF File" :
+    contentType === "audio" ? "Audio" : "";
+
+  const shapesStatus = `${customStyle.moduleType.charAt(0).toUpperCase() + customStyle.moduleType.slice(1)}`;
+
+  const colorsStatus = customStyle.isTransparent 
+    ? "Transparent" 
+    : customStyle.fgStyle === "solid" 
+      ? settings.fgColor.toUpperCase() 
+      : "Gradient";
+
+  const logoStatus = logoPreview && bgImagePreview 
+    ? "Logo + Wallpaper" 
+    : logoPreview 
+      ? "Logo Active" 
+      : bgImagePreview 
+        ? "Wallpaper Active" 
+        : "None";
+
+  const frameStatus = customStyle.frameStyle === "none" 
+    ? "No Frame" 
+    : "Frame Active";
+
   return (
     <div className="generator-grid fade-in">
       {/* Left controls panel */}
@@ -1498,19 +1984,31 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         )}
 
         {/* Accordion Section 1: Content Input */}
-        <div className="collapsible-section">
+        <div className={`collapsible-section ${openSection === "content" ? "is-open" : ""}`}>
           <button
             className={`collapsible-trigger ${openSection === "content" ? "expanded" : ""}`}
             onClick={() => toggleSection("content")}
           >
-            <span style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "left" }}>
-              <span className="collapsible-trigger-title">1. Content & Formats</span>
-              <span className="collapsible-trigger-desc">Choose your input type (URL, WiFi, Contact) or upload PDF/Audio documents to auto-host online.</span>
-            </span>
+            <div className="collapsible-trigger-left">
+              <div className="section-icon-badge section-badge-content">
+                <Layers size={18} />
+                <span className="badge-number">1</span>
+              </div>
+              <div className="section-text-block">
+                <div className="collapsible-trigger-title-row">
+                  <span className="collapsible-trigger-title">1. Content & Formats</span>
+                  <span className={`section-status-chip ${openSection === "content" ? "chip-active" : "chip-default"}`}>
+                    {contentStatus}
+                  </span>
+                </div>
+                <span className="collapsible-trigger-desc">Choose your input type (URL, WiFi, Contact) or upload PDF/Audio documents to auto-host online.</span>
+              </div>
+            </div>
             <svg className="collapsible-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
+
           {openSection === "content" && (
             <div className="collapsible-content" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               
@@ -1796,89 +2294,129 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                   </div>
                 )}
               </div>
-
             </div>
           )}
         </div>
 
         {/* Accordion Section 2: Pattern & Shapes */}
-        <div className="collapsible-section">
+        <div className={`collapsible-section ${openSection === "shapes" ? "is-open" : ""}`}>
           <button
             className={`collapsible-trigger ${openSection === "shapes" ? "expanded" : ""}`}
             onClick={() => toggleSection("shapes")}
           >
-            <span style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "left" }}>
-              <span className="collapsible-trigger-title">2. Pattern & Shapes</span>
-              <span className="collapsible-trigger-desc">Customize the shape of the QR code modules (body pixels) and outer/inner finder corner markers.</span>
-            </span>
+            <div className="collapsible-trigger-left">
+              <div className="section-icon-badge section-badge-shapes">
+                <Shapes size={18} />
+                <span className="badge-number">2</span>
+              </div>
+              <div className="section-text-block">
+                <div className="collapsible-trigger-title-row">
+                  <span className="collapsible-trigger-title">2. Pattern &amp; Shapes</span>
+                  <span className={`section-status-chip ${openSection === "shapes" ? "chip-active" : "chip-default"}`}>
+                    {shapesStatus}
+                  </span>
+                </div>
+                <span className="collapsible-trigger-desc">Pick QR module shape, outer finder frame, and inner eye dot from visual previews.</span>
+              </div>
+            </div>
             <svg className="collapsible-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
           {openSection === "shapes" && (
-            <div className="collapsible-content" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              {/* Module Type Custom Dropdown */}
-              <CustomDropdown
-                label="QR Module Type"
-                value={customStyle.moduleType}
-                onChange={(val) => setCustomStyle((p) => ({ ...p, moduleType: val }))}
-                options={[
-                  { value: "squares", label: "Classic Squares", icon: icons.square, description: "Standard blocky pixel matrices, best for high scannability.", category: "Standard Patterns" },
-                  { value: "rounded", label: "Rounded Pixels", icon: icons.rounded, description: "Smooth rounded modules, creates a soft and organic tech layout.", category: "Standard Patterns" },
-                  { value: "dots", label: "Modern Dots", icon: icons.dot, description: "Sleek circular dot pixels, offers a highly unique and clean design.", category: "Sleek & Geometric" },
-                  { value: "diamonds", label: "Reflective Diamonds", icon: icons.diamond, description: "Symmetric diamond pixel modules, creates a luxury tech appearance.", category: "Sleek & Geometric" },
-                  { value: "stars", label: "Star Decals", icon: icons.star, description: "Playful star-shaped modules, excellent for branding and retail.", category: "Artistic Decals" },
-                  { value: "lines", label: "Matrix Stripes", icon: icons.lines, description: "Parallel vertical line segments, delivers a barcode-inspired aesthetic.", category: "Artistic Decals" },
-                ]}
-              />
+            <div className="collapsible-content" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-                {/* Outer Corner Frame */}
-                <CustomDropdown
-                  label="Outer Frame Shape"
-                  value={customStyle.cornerOuter}
-                  onChange={(val) => setCustomStyle((p) => ({ ...p, cornerOuter: val }))}
-                  direction="up"
-                  options={[
-                    { value: "squares", label: "Sharp Squares", icon: icons.outlineSquare, description: "Classic finder patterns with standard hard right-angled borders.", category: "Classic Shapes" },
-                    { value: "rounded", label: "Rounded Rect", icon: icons.outlineRounded, description: "Modern soft-cornered frames, balances structure with smooth lines.", category: "Classic Shapes" },
-                    { value: "circle", label: "Circular Ring", icon: icons.outlineCircle, description: "Trendy ring-shaped corner finders, gives a premium creative look.", category: "Classic Shapes" },
-                    { value: "leaf", label: "Organic Leaf", icon: icons.outlineLeaf, description: "Leaf-shaped cutouts, pairs opposite curved and sharp corners.", category: "Creative Outlines" },
-                    { value: "shield", label: "Security Shield", icon: icons.outlineShield, description: "Shield shape outline, adds a formal trust structure to finders.", category: "Creative Outlines" },
-                    { value: "flower", label: "Scalloped Flower", icon: icons.outlineFlower, description: "Flower pedal scalloped outline, ideal for soft playful branding.", category: "Creative Outlines" },
-                  ]}
-                />
-
-                {/* Inner Corner Dot */}
-                <CustomDropdown
-                  label="Inner Dot Shape"
-                  value={customStyle.cornerInner}
-                  onChange={(val) => setCustomStyle((p) => ({ ...p, cornerInner: val }))}
-                  direction="up"
-                  align="right"
-                  options={[
-                    { value: "squares", label: "Sharp Square Dot", icon: icons.square, description: "Standard solid square block in the center of the corner finders.", category: "Classic Fills" },
-                    { value: "rounded", label: "Rounded Center Dot", icon: icons.rounded, description: "Smooth solid rounded block, aligns with curved module styles.", category: "Classic Fills" },
-                    { value: "circle", label: "Circular Center Dot", icon: icons.dot, description: "Solid round sphere center, ideal for circular outer frames.", category: "Classic Fills" },
-                    { value: "leaf", label: "Leaf Center Dot", icon: icons.outlineLeaf, description: "Leaf curved center dot matching leaf frame styles.", category: "Creative Shapes" },
-                    { value: "diamond", label: "Diamond Center Dot", icon: icons.diamond, description: "Symmetric diamond center dot, looks premium and sharp.", category: "Creative Shapes" },
-                  ]}
-                />
+              {/* Module Shape Tiles */}
+              <div className="shape-picker-section">
+                <div className="section-sub-header">
+                  <span className="section-sub-title">Module Body Style</span>
+                  <div className="section-sub-line" />
+                </div>
+                <div className="shape-picker-grid">
+                  {moduleShapes.map((s) => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      className={`shape-tile ${customStyle.moduleType === s.value ? "selected" : ""}`}
+                      onClick={() => setCustomStyle((p) => ({ ...p, moduleType: s.value }))}
+                      title={s.label}
+                    >
+                      <div className="shape-tile-preview">{s.preview}</div>
+                      <span className="shape-tile-label">{s.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {/* Outer Corner Tiles */}
+              <div className="shape-picker-section">
+                <div className="section-sub-header">
+                  <span className="section-sub-title">Outer Finder Frame</span>
+                  <div className="section-sub-line" />
+                </div>
+                <div className="shape-picker-grid">
+                  {outerShapes.map((s) => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      className={`shape-tile ${customStyle.cornerOuter === s.value ? "selected" : ""}`}
+                      onClick={() => setCustomStyle((p) => ({ ...p, cornerOuter: s.value }))}
+                      title={s.label}
+                    >
+                      <div className="shape-tile-preview">{s.preview}</div>
+                      <span className="shape-tile-label">{s.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Inner Eye Dot Tiles */}
+              <div className="shape-picker-section">
+                <div className="section-sub-header">
+                  <span className="section-sub-title">Inner Eye Dot</span>
+                  <div className="section-sub-line" />
+                </div>
+                <div className="shape-picker-grid">
+                  {innerDots.map((s) => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      className={`shape-tile ${customStyle.cornerInner === s.value ? "selected" : ""}`}
+                      onClick={() => setCustomStyle((p) => ({ ...p, cornerInner: s.value }))}
+                      title={s.label}
+                    >
+                      <div className="shape-tile-preview">{s.preview}</div>
+                      <span className="shape-tile-label">{s.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
             </div>
           )}
         </div>
 
         {/* Accordion Section 3: Colors & Transparency */}
-        <div className="collapsible-section">
+        <div className={`collapsible-section ${openSection === "colors" ? "is-open" : ""}`}>
           <button
             className={`collapsible-trigger ${openSection === "colors" ? "expanded" : ""}`}
             onClick={() => toggleSection("colors")}
           >
-            <span style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "left" }}>
-              <span className="collapsible-trigger-title">3. Colors & Transparency</span>
-              <span className="collapsible-trigger-desc">Set solid colors, linear/radial gradients, custom background colors, or enable alpha transparency.</span>
-            </span>
+            <div className="collapsible-trigger-left">
+              <div className="section-icon-badge section-badge-colors">
+                <Palette size={18} />
+                <span className="badge-number">3</span>
+              </div>
+              <div className="section-text-block">
+                <div className="collapsible-trigger-title-row">
+                  <span className="collapsible-trigger-title">3. Colors & Transparency</span>
+                  <span className={`section-status-chip ${openSection === "colors" ? "chip-active" : "chip-default"}`}>
+                    {colorsStatus}
+                  </span>
+                </div>
+                <span className="collapsible-trigger-desc">Set solid colors, linear/radial gradients, custom background colors, or enable alpha transparency.</span>
+              </div>
+            </div>
             <svg className="collapsible-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9" />
             </svg>
@@ -1898,24 +2436,48 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
               />
 
               {customStyle.fgStyle === "solid" ? (
-                /* Solid Color Input */
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" htmlFor="fg-color">QR Color</label>
-                  <div className="color-picker-row">
-                    <input
-                      type="color"
-                      id="fg-color"
-                      className="color-swatch-input"
-                      value={settings.fgColor}
-                      onChange={(e) => { setSettings((p) => ({ ...p, fgColor: e.target.value })); setFgHex(e.target.value); }}
-                    />
-                    <input
-                      type="text"
-                      className="form-input color-hex-input"
-                      value={fgHex}
-                      onChange={(e) => handleFgChange(e.target.value)}
-                      maxLength={7}
-                    />
+                /* Solid Color Input with Presets */
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" htmlFor="fg-color">QR Foreground Color</label>
+                    <div className="color-presets-row">
+                      {colorPresets.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          className={`color-preset-swatch${settings.fgColor === c ? " active-swatch" : ""}`}
+                          style={{ background: c }}
+                          onClick={() => handleColorPreset(c)}
+                          title={c}
+                        />
+                      ))}
+                    </div>
+                    <div className="color-picker-row">
+                      <input
+                        type="color"
+                        id="fg-color"
+                        className="color-swatch-input"
+                        value={settings.fgColor}
+                        onChange={(e) => { setSettings((p) => ({ ...p, fgColor: e.target.value })); setFgHex(e.target.value); }}
+                      />
+                      <input
+                        type="text"
+                        className="form-input color-hex-input"
+                        value={fgHex}
+                        onChange={(e) => handleFgChange(e.target.value)}
+                        maxLength={7}
+                      />
+                      <button
+                        type="button"
+                        className="color-swap-btn"
+                        onClick={handleSwapColors}
+                        title="Swap FG / BG colors"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -2033,15 +2595,26 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         </div>
 
         {/* Accordion Section 4: Logo & Background Images */}
-        <div className="collapsible-section">
+        <div className={`collapsible-section ${openSection === "logo" ? "is-open" : ""}`}>
           <button
             className={`collapsible-trigger ${openSection === "logo" ? "expanded" : ""}`}
             onClick={() => toggleSection("logo")}
           >
-            <span style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "left" }}>
-              <span className="collapsible-trigger-title">4. Logo & Background Images</span>
-              <span className="collapsible-trigger-desc">Embed center branding logos with safe margins, or upload custom background wallpaper images.</span>
-            </span>
+            <div className="collapsible-trigger-left">
+              <div className="section-icon-badge section-badge-logo">
+                <ImageIcon size={18} />
+                <span className="badge-number">4</span>
+              </div>
+              <div className="section-text-block">
+                <div className="collapsible-trigger-title-row">
+                  <span className="collapsible-trigger-title">4. Logo & Background Images</span>
+                  <span className={`section-status-chip ${openSection === "logo" ? "chip-active" : "chip-default"}`}>
+                    {logoStatus}
+                  </span>
+                </div>
+                <span className="collapsible-trigger-desc">Embed center branding logos with safe margins, or upload custom background wallpaper images.</span>
+              </div>
+            </div>
             <svg className="collapsible-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9" />
             </svg>
@@ -2185,15 +2758,26 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         </div>
 
         {/* Accordion Section 5: Frames, Labels & Layout */}
-        <div className="collapsible-section">
+        <div className={`collapsible-section ${openSection === "frame" ? "is-open" : ""}`}>
           <button
             className={`collapsible-trigger ${openSection === "frame" ? "expanded" : ""}`}
             onClick={() => toggleSection("frame")}
           >
-            <span style={{ display: "flex", flexDirection: "column", gap: "2px", textAlign: "left" }}>
-              <span className="collapsible-trigger-title">5. Frames, Labels & Layout</span>
-              <span className="collapsible-trigger-desc">Wrap your QR code in 20+ design frame CTAs, adjust quiet zone margins, and configure high-res quality exports.</span>
-            </span>
+            <div className="collapsible-trigger-left">
+              <div className="section-icon-badge section-badge-frames">
+                <Frame size={18} />
+                <span className="badge-number">5</span>
+              </div>
+              <div className="section-text-block">
+                <div className="collapsible-trigger-title-row">
+                  <span className="collapsible-trigger-title">5. Frames, Labels &amp; Layout</span>
+                  <span className={`section-status-chip ${openSection === "frame" ? "chip-active" : "chip-default"}`}>
+                    {frameStatus}
+                  </span>
+                </div>
+                <span className="collapsible-trigger-desc">Wrap your QR code in 20+ design frame CTAs, adjust quiet zone margins, and configure high-res quality exports.</span>
+              </div>
+            </div>
             <svg className="collapsible-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9" />
             </svg>
@@ -2201,37 +2785,31 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
           {openSection === "frame" && (
             <div className="collapsible-content" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               
-              {/* Custom Frame Dropdown */}
-              <CustomDropdown
-                label="Custom Frame Layout"
-                value={customStyle.frameStyle}
-                onChange={(val) => setCustomStyle((p) => ({ ...p, frameStyle: val }))}
-                options={[
-                  { value: "none", label: "No Frame Layout", description: "Clean raw QR code matrix, suitable for minimalist designs.", category: "Minimalist Style" },
-                  { value: "banner-bottom", label: "Bottom Text Banner", description: "Encloses the QR code with a colored call-to-action bar at the bottom.", category: "Call-to-Action Banners" },
-                  { value: "banner-top", label: "Top Text Banner", description: "Encloses the QR code with a colored call-to-action bar at the top.", category: "Call-to-Action Banners" },
-                  { value: "bubble-bottom", label: "Speech Bubble (Down)", description: "Wraps the QR code in an interactive message bubble with a bottom pointer.", category: "Call-to-Action Banners" },
-                  { value: "bubble-top", label: "Speech Bubble (Up)", description: "Wraps the QR code in an interactive message bubble with a top pointer.", category: "Call-to-Action Banners" },
-                  { value: "elegant-border", label: "Elegant Frame Outline", description: "Surrounds the canvas with a thick border outline and a bottom label bar.", category: "Call-to-Action Banners" },
-                  { value: "corners-only", label: "Camera Corner Brackets", description: "Focus brackets surrounding the QR code corners.", category: "Call-to-Action Banners" },
-                  { value: "phone-bezel", label: "Smartphone Bezel", description: "Encloses the QR code in a mockup smartphone frame.", category: "Device Mockups" },
-                  { value: "clipboard", label: "Office Clipboard", description: "Wraps the QR code in a clipboard holder mockup.", category: "Device Mockups" },
-                  { value: "laptop-monitor", label: "Laptop Screen Monitor", description: "Laptop frame outline with a bottom keyboard stand.", category: "Device Mockups" },
-                  { value: "shopping-bag", label: "Shopping Bag Outline", description: "Creative shopping bag handles enclosing the QR code.", category: "E-Commerce & Retail" },
-                  { value: "tag-pendant", label: "Hanging Price Tag", description: "Pendant tag layout with a string loop at the top.", category: "E-Commerce & Retail" },
-                  { value: "ticket-coupon", label: "Ticket Coupon Voucher", description: "Voucher layout with side ticket notches and perforation lines.", category: "E-Commerce & Retail" },
-                  { value: "gift-box", label: "Surprise Gift Box", description: "Wraps the QR in a gift box with a bow ribbon on top.", category: "E-Commerce & Retail" },
-                  { value: "circular-ring", label: "Circular Badge Frame", description: "Frames the QR code in a double circular ring badge.", category: "Borders & Shapes" },
-                  { value: "dashed-border", label: "Retro Dashed Line", description: "Simple dashed line border wrapping the QR.", category: "Borders & Shapes" },
-                  { value: "double-border", label: "Royal Double Border", description: "Two parallel border lines framing the QR.", category: "Borders & Shapes" },
-                  { value: "heart-love", label: "Romantic Heart Outline", description: "Heart shape outline enclosing the QR code.", category: "Borders & Shapes" },
-                  { value: "star-sparkle", label: "Sparkling Star Border", description: "Outer frame with sparkling star corner decal highlights.", category: "Borders & Shapes" },
-                  { value: "book-cover", label: "Classic Book Cover", description: "Spine and board borders mimicking a book binding.", category: "Thematic Outlines" },
-                  { value: "coffee-cup", label: "Cafe Mug Outline", description: "Mug silhouette outline framing with a right handle.", category: "Thematic Outlines" },
-                  { value: "envelope-mail", label: "Postcard Mail Outline", description: "Envelope layout frame with triangular top flap lines.", category: "Thematic Outlines" },
-                  { value: "shield-badge", label: "Security Shield", description: "Security shield badge contour wrapping the QR.", category: "Thematic Outlines" },
-                ]}
-              />
+              {/* Visual Frame Tile Picker */}
+              <div className="frame-picker-outer">
+                <label className="form-label">Select Frame Style</label>
+                <div className="frame-picker-scroll">
+                  {frameCategories.map((cat) => (
+                    <div key={cat.category}>
+                      <div className="frame-category-header">{cat.category}</div>
+                      <div className="frame-picker-grid">
+                        {cat.frames.map((f) => (
+                          <button
+                            key={f.value}
+                            type="button"
+                            className={`frame-tile ${customStyle.frameStyle === f.value ? "selected" : ""}`}
+                            onClick={() => setCustomStyle((p) => ({ ...p, frameStyle: f.value }))}
+                            title={f.label}
+                          >
+                            <div className="frame-tile-preview">{f.preview}</div>
+                            <span className="frame-tile-label">{f.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               {/* Quiet Zone/Margin Slider */}
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -2469,6 +3047,33 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                   </svg>
                 </button>
               </div>
+
+              {/* Content preview & copy text */}
+              {text.trim() && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div className="copy-text-row" style={{ flex: 1 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, opacity: 0.5 }}>
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                      {text.length > 60 ? text.slice(0, 60) + "…" : text}
+                    </span>
+                  </div>
+                  <button
+                    id="btn-copy-text"
+                    className="btn btn-ghost btn-sm"
+                    onClick={handleCopyText}
+                    data-tooltip="Copy Content"
+                    style={{ flexShrink: 0, height: 36 }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
