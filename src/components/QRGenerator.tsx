@@ -27,7 +27,7 @@ interface CustomQRStyle {
   labelFont: string;
   labelOrientation: "horizontal" | "vertical";
   
-  // NEW premium features states
+  // Premium features states
   fgStyle: "solid" | "gradient";
   gradientStart: string;
   gradientEnd: string;
@@ -57,7 +57,6 @@ const defaultStyles: CustomQRStyle = {
   labelFont: "sans-serif",
   labelOrientation: "horizontal",
   
-  // NEW premium defaults
   fgStyle: "solid",
   gradientStart: "#7c3aed",
   gradientEnd: "#2563eb",
@@ -95,9 +94,10 @@ interface CustomDropdownProps {
   options: DropdownOption[];
   onChange: (val: any) => void;
   direction?: "down" | "up";
+  align?: "left" | "right";
 }
 
-function CustomDropdown({ label, value, options, onChange, direction = "down" }: CustomDropdownProps) {
+function CustomDropdown({ label, value, options, onChange, direction = "down", align = "left" }: CustomDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -134,7 +134,7 @@ function CustomDropdown({ label, value, options, onChange, direction = "down" }:
           </svg>
         </button>
         {isOpen && (
-          <div className="custom-dropdown-menu" style={menuStyle}>
+          <div className={`custom-dropdown-menu ${align === "right" ? "align-right" : ""}`} style={menuStyle}>
             {options.map((opt) => (
               <button
                 key={String(opt.value)}
@@ -167,6 +167,7 @@ function CustomDropdown({ label, value, options, onChange, direction = "down" }:
 }
 
 export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginClick }: QRGeneratorProps) {
+  // Main encoded text state
   const [text, setText] = useState("https://happyqr.vercel.app");
   const [settings, setSettings] = useState<QRSettings>(defaultSettings);
   const [customStyle, setCustomStyle] = useState<CustomQRStyle>(defaultStyles);
@@ -176,6 +177,39 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
   const [bgHex, setBgHex] = useState("#ffffff");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [bgImagePreview, setBgImagePreview] = useState<string | null>(null);
+
+  // Content formats inputs states
+  const [contentType, setContentType] = useState<"url" | "text" | "email" | "phone" | "wifi" | "vcard" | "pdf" | "audio">("url");
+  const [urlVal, setUrlVal] = useState("https://happyqr.vercel.app");
+  const [textVal, setTextVal] = useState("Hello from HappyQR!");
+  
+  // Email states
+  const [emailVal, setEmailVal] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  
+  // Phone state
+  const [phoneVal, setPhoneVal] = useState("");
+  
+  // WiFi states
+  const [wifiSsid, setWifiSsid] = useState("");
+  const [wifiPassword, setWifiPassword] = useState("");
+  const [wifiSecurity, setWifiSecurity] = useState("WPA");
+  
+  // vCard states
+  const [vFirstName, setVFirstName] = useState("");
+  const [vLastName, setVLastName] = useState("");
+  const [vPhone, setVPhone] = useState("");
+  const [vEmail, setVEmail] = useState("");
+  const [vOrg, setVOrg] = useState("");
+  const [vWebsite, setVWebsite] = useState("");
+  
+  // File variables
+  const [pdfUrl, setPdfUrl] = useState("");
+  const [pdfName, setPdfName] = useState("");
+  const [audioUrl, setAudioUrl] = useState("");
+  const [audioName, setAudioName] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
   // Accordion state
   const [openSection, setOpenSection] = useState<"content" | "shapes" | "colors" | "logo" | "frame" | null>("content");
@@ -187,6 +221,8 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgImageInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load limits from localStorage
@@ -206,6 +242,109 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
 
   const isLimitReached = !userEmail && getAnonGenCount() >= getAnonLimit();
 
+  // Handle PDF/Audio Uploads using tmpfiles.org
+  const handleCloudFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "pdf" | "audio") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (type === "pdf" && file.type !== "application/pdf") {
+      showToast("Please select a valid PDF file.", "error");
+      return;
+    }
+    if (type === "audio" && !file.type.startsWith("audio/")) {
+      showToast("Please select a valid audio file.", "error");
+      return;
+    }
+
+    setIsUploading(true);
+    showToast(`Uploading ${file.name} to cloud...`, "info");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      // Free anonymous upload
+      const res = await fetch("https://tmpfiles.org/api/v1/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const json = await res.json();
+      if (res.ok && json.data?.url) {
+        // Direct download file link transformation
+        const directUrl = json.data.url.replace("tmpfiles.org/", "tmpfiles.org/dl/");
+        if (type === "pdf") {
+          setPdfUrl(directUrl);
+          setPdfName(file.name);
+        } else {
+          setAudioUrl(directUrl);
+          setAudioName(file.name);
+        }
+        showToast("File uploaded and QR Code generated!", "success");
+      } else {
+        throw new Error(json.error || "Upload response error");
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast("Upload failed. Try a smaller file size.", "error");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Compile inputs states into the main text string reactively
+  useEffect(() => {
+    if (contentType === "url") {
+      setText(urlVal || "https://happyqr.vercel.app");
+    } else if (contentType === "text") {
+      setText(textVal || "HappyQR Code");
+    } else if (contentType === "email") {
+      if (emailVal) {
+        setText(`mailto:${emailVal}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`);
+      } else {
+        setText("");
+      }
+    } else if (contentType === "phone") {
+      setText(phoneVal ? `tel:${phoneVal}` : "");
+    } else if (contentType === "wifi") {
+      if (wifiSsid) {
+        setText(`WIFI:T:${wifiSecurity};S:${wifiSsid};P:${wifiPassword};;`);
+      } else {
+        setText("");
+      }
+    } else if (contentType === "vcard") {
+      if (vFirstName || vLastName) {
+        const card = `BEGIN:VCARD\nVERSION:3.0\nN:${vLastName};${vFirstName};;;\nFN:${vFirstName} ${vLastName}\nORG:${vOrg}\nTEL;TYPE=CELL:${vPhone}\nEMAIL:${vEmail}\nURL:${vWebsite}\nEND:VCARD`;
+        setText(card);
+      } else {
+        setText("");
+      }
+    } else if (contentType === "pdf") {
+      setText(pdfUrl || "https://happyqr.vercel.app/mock-pdf");
+    } else if (contentType === "audio") {
+      setText(audioUrl || "https://happyqr.vercel.app/mock-audio");
+    }
+  }, [
+    contentType,
+    urlVal,
+    textVal,
+    emailVal,
+    emailSubject,
+    emailBody,
+    phoneVal,
+    wifiSsid,
+    wifiPassword,
+    wifiSecurity,
+    vFirstName,
+    vLastName,
+    vPhone,
+    vEmail,
+    vOrg,
+    vWebsite,
+    pdfUrl,
+    audioUrl
+  ]);
+
   // Canvas Compositor Drawing Logic
   const generateStyledQR = useCallback(async () => {
     if (!text.trim()) {
@@ -217,15 +356,12 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
 
     setIsGenerating(true);
     try {
-      // 1. Generate QR grid matrix using error correction options
       const qr = QRCode.create(text, { errorCorrectionLevel: customStyle.errorCorrection });
       const { modules } = qr;
       const N = modules.size;
 
-      // Sizing calculation (from customization setting)
       const baseQRSize = customStyle.downloadSize;
       
-      // Calculate layout dimension offsets for custom framing
       let extraTop = 0;
       let extraBottom = 0;
       let extraLeft = 0;
@@ -245,7 +381,6 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         extraRight = baseQRSize * 0.06;
       }
 
-      // Add label space margins if frame is 'none' and text exists
       let textSpacing = 0;
       if (customStyle.frameStyle === "none" && customStyle.labelText.trim()) {
         textSpacing = customStyle.labelFontSize * 2;
@@ -255,7 +390,6 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         else if (customStyle.labelPosition === "right") extraRight = textSpacing;
       }
 
-      // Canvas dimensions
       const canvasW = baseQRSize + extraLeft + extraRight;
       const canvasH = baseQRSize + extraTop + extraBottom;
 
@@ -265,7 +399,6 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      // Background clearing
       if (customStyle.isTransparent) {
         ctx.clearRect(0, 0, canvasW, canvasH);
       } else {
@@ -273,7 +406,6 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         ctx.fillRect(0, 0, canvasW, canvasH);
       }
 
-      // Draw custom background image if available
       if (bgImagePreview && !customStyle.isTransparent) {
         const bgImg = new Image();
         bgImg.src = bgImagePreview;
@@ -286,7 +418,6 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         ctx.restore();
       }
 
-      // Determine offset coordinates of QR patterns inside canvas
       const qrOffsetX = extraLeft;
       const qrOffsetY = extraTop;
       const qrGridSize = baseQRSize - 2 * customStyle.marginSize;
@@ -294,7 +425,6 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
       const startX = qrOffsetX + customStyle.marginSize;
       const startY = qrOffsetY + customStyle.marginSize;
 
-      // 2. Build foreground fill style (Solid or Linear/Radial Gradient)
       let fgStyle: string | CanvasGradient = settings.fgColor;
       if (customStyle.fgStyle === "gradient") {
         if (customStyle.gradientType === "radial") {
@@ -332,16 +462,13 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
       ctx.fillStyle = fgStyle;
       ctx.strokeStyle = fgStyle;
 
-      // 3. Draw standard modules
       for (let r = 0; r < N; r++) {
         for (let c = 0; c < N; c++) {
-          // Skip Finder Patterns
           const isTopLeft = r < 7 && c < 7;
           const isTopRight = r < 7 && c >= N - 7;
           const isBottomLeft = r >= N - 7 && c < 7;
           if (isTopLeft || isTopRight || isBottomLeft) continue;
 
-          // Skip Center spaces if logo is present
           if (logoPreview) {
             const centerStart = Math.floor(N / 2) - 3;
             const centerEnd = Math.floor(N / 2) + 3;
@@ -367,7 +494,6 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         }
       }
 
-      // Helper function to draw rounded shapes
       function drawRoundedRect(
         c: CanvasRenderingContext2D,
         x: number,
@@ -390,7 +516,6 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         c.fill();
       }
 
-      // 4. Draw Corner Finder Patterns (Corners)
       const finders = [
         { r: 0, c: 0 },
         { r: 0, c: N - 7 },
@@ -402,7 +527,6 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         const y = startY + f.r * cellSize;
         const size = 7 * cellSize;
 
-        // Draw Outer Frame outline
         ctx.lineWidth = cellSize;
         ctx.strokeStyle = fgStyle;
 
@@ -419,7 +543,6 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
           ctx.stroke();
         }
 
-        // Draw Inner Center Dot
         ctx.fillStyle = fgStyle;
         const dotOffset = 2 * cellSize;
         const dotSize = 3 * cellSize;
@@ -437,7 +560,6 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         }
       });
 
-      // 5. Draw Center logo image overlay
       if (logoPreview) {
         const logoImg = new Image();
         logoImg.src = logoPreview;
@@ -459,29 +581,24 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
       }
 
-      // 6. Draw Premium Custom Frames / CTA Banner Banners
       if (customStyle.frameStyle !== "none" && customStyle.labelText.trim()) {
         ctx.fillStyle = customStyle.frameColor;
 
         if (customStyle.frameStyle === "banner-bottom") {
-          // Bottom Banner shape
           ctx.beginPath();
           ctx.roundRect(0, baseQRSize, baseQRSize, extraBottom, [0, 0, 16, 16]);
           ctx.fill();
 
-          // CTA Text
           ctx.fillStyle = customStyle.labelColor;
           ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(customStyle.labelText, baseQRSize / 2, baseQRSize + extraBottom / 2);
         } else if (customStyle.frameStyle === "bubble") {
-          // Speech Bubble wrapper around QR
           ctx.beginPath();
           ctx.roundRect(4, 4, canvasW - 8, canvasH - 24, 24);
           ctx.fill();
 
-          // Speech bubble tip
           ctx.beginPath();
           ctx.moveTo(canvasW / 2 + 12, canvasH - 24);
           ctx.lineTo(canvasW / 2 - 12, canvasH - 24);
@@ -489,23 +606,19 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
           ctx.closePath();
           ctx.fill();
 
-          // CTA Text
           ctx.fillStyle = customStyle.labelColor;
           ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(customStyle.labelText, canvasW / 2, baseQRSize + extraTop + extraBottom / 2);
         } else if (customStyle.frameStyle === "elegant-border") {
-          // Full wrapping border
           ctx.strokeStyle = customStyle.frameColor;
           ctx.lineWidth = 14;
           ctx.strokeRect(7, 7, canvasW - 14, canvasH - 14);
 
-          // Draw banner segment inside bottom edge of border
           ctx.beginPath();
           ctx.fillRect(7, canvasH - extraBottom - 7, canvasW - 14, extraBottom);
 
-          // CTA Text
           ctx.fillStyle = customStyle.labelColor;
           ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
           ctx.textAlign = "center";
@@ -514,7 +627,6 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         }
       }
 
-      // Draw legacy standard Label Text if frameStyle is 'none'
       if (customStyle.frameStyle === "none" && customStyle.labelText.trim()) {
         ctx.fillStyle = customStyle.labelColor;
         ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
@@ -554,7 +666,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
     }
   }, [text, settings, customStyle, logoPreview, bgImagePreview, showToast]);
 
-  // Debounced execution hook
+  // Debounced rendering hook
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -565,7 +677,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
     };
   }, [text, settings, customStyle, logoPreview, bgImagePreview, generateStyledQR]);
 
-  // File Upload Handlers
+  // File uploading handlers
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -612,7 +724,6 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
     showToast("Background image removed.", "info");
   };
 
-  // Color inputs change helpers
   const handleFgChange = (val: string) => {
     setFgHex(val);
     if (/^#[0-9a-fA-F]{6}$/.test(val)) setSettings((p) => ({ ...p, fgColor: val }));
@@ -623,7 +734,6 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
     if (/^#[0-9a-fA-F]{6}$/.test(val)) setSettings((p) => ({ ...p, bgColor: val }));
   };
 
-  // Download & Copy Handlers
   const handleDownloadPNG = () => {
     if (isLimitReached) {
       showToast("Anon limit reached. Please Login to generate unlimited QR codes.", "error");
@@ -706,7 +816,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
     onGenerate(entry);
   };
 
-  // Pre-drawn Option Icons (using clean inline vector shapes)
+  // Pre-drawn Option Icons
   const icons = {
     square: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -824,25 +934,295 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
             className={`collapsible-trigger ${openSection === "content" ? "expanded" : ""}`}
             onClick={() => toggleSection("content")}
           >
-            <span>1. Content Input</span>
+            <span>1. Content Input Formats</span>
             <svg className="collapsible-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
           {openSection === "content" && (
-            <div className="collapsible-content">
-              {/* QR Content Input */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" htmlFor="qr-content-input">QR Content (URL / Text)</label>
-                <input
-                  id="qr-content-input"
-                  type="text"
-                  className="form-input"
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="e.g. https://happyqr.com"
-                />
+            <div className="collapsible-content" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              
+              {/* Content Formats Selector Grid */}
+              <div>
+                <label className="form-label">Select QR Format Type</label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "6px" }}>
+                  {[
+                    { id: "url", label: "🔗 Link" },
+                    { id: "text", label: "💬 Text" },
+                    { id: "email", label: "📧 Email" },
+                    { id: "phone", label: "📞 Phone" },
+                    { id: "wifi", label: "📶 WiFi" },
+                    { id: "vcard", label: "👤 Contact" },
+                    { id: "pdf", label: "📄 PDF File" },
+                    { id: "audio", label: "🎵 Audio" },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`preset-chip ${contentType === item.id ? "active" : ""}`}
+                      onClick={() => setContentType(item.id as any)}
+                      style={{ justifyContent: "center", fontSize: "11px", padding: "6px 4px" }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: 14 }}>
+                {/* 1. URL LINK */}
+                {contentType === "url" && (
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" htmlFor="url-input">Website URL Link</label>
+                    <input
+                      id="url-input"
+                      type="url"
+                      className="form-input"
+                      value={urlVal}
+                      onChange={(e) => setUrlVal(e.target.value)}
+                      placeholder="e.g. https://happyqr.vercel.app"
+                    />
+                  </div>
+                )}
+
+                {/* 2. TEXT */}
+                {contentType === "text" && (
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" htmlFor="text-input">Plain Text Message</label>
+                    <textarea
+                      id="text-input"
+                      className="form-textarea"
+                      value={textVal}
+                      onChange={(e) => setTextVal(e.target.value)}
+                      placeholder="Type your message text here..."
+                    />
+                  </div>
+                )}
+
+                {/* 3. EMAIL */}
+                {contentType === "email" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" htmlFor="email-address">Recipient Email</label>
+                      <input
+                        id="email-address"
+                        type="email"
+                        className="form-input"
+                        placeholder="recipient@example.com"
+                        value={emailVal}
+                        onChange={(e) => setEmailVal(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" htmlFor="email-subject">Subject</label>
+                      <input
+                        id="email-subject"
+                        type="text"
+                        className="form-input"
+                        placeholder="Subject title"
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" htmlFor="email-body">Message Body</label>
+                      <textarea
+                        id="email-body"
+                        className="form-textarea"
+                        placeholder="Write your email body message here..."
+                        value={emailBody}
+                        onChange={(e) => setEmailBody(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. PHONE */}
+                {contentType === "phone" && (
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" htmlFor="phone-number">Phone Number</label>
+                    <input
+                      id="phone-number"
+                      type="tel"
+                      className="form-input"
+                      placeholder="e.g. +91 9999999999"
+                      value={phoneVal}
+                      onChange={(e) => setPhoneVal(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {/* 5. WIFI */}
+                {contentType === "wifi" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" htmlFor="wifi-ssid">Network SSID (Name)</label>
+                      <input
+                        id="wifi-ssid"
+                        type="text"
+                        className="form-input"
+                        placeholder="SSID Name"
+                        value={wifiSsid}
+                        onChange={(e) => setWifiSsid(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" htmlFor="wifi-password">Password</label>
+                      <input
+                        id="wifi-password"
+                        type="password"
+                        className="form-input"
+                        placeholder="Security Password"
+                        value={wifiPassword}
+                        onChange={(e) => setWifiPassword(e.target.value)}
+                      />
+                    </div>
+                    <CustomDropdown
+                      label="Security Type"
+                      value={wifiSecurity}
+                      onChange={(val) => setWifiSecurity(val)}
+                      options={[
+                        { value: "WPA", label: "WPA/WPA2" },
+                        { value: "WEP", label: "WEP Security" },
+                        { value: "nopass", label: "Open Network (No Password)" },
+                      ]}
+                    />
+                  </div>
+                )}
+
+                {/* 6. VCARD CONTACT */}
+                {contentType === "vcard" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" htmlFor="first-name">First Name</label>
+                        <input
+                          id="first-name"
+                          type="text"
+                          className="form-input"
+                          value={vFirstName}
+                          onChange={(e) => setVFirstName(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" htmlFor="last-name">Last Name</label>
+                        <input
+                          id="last-name"
+                          type="text"
+                          className="form-input"
+                          value={vLastName}
+                          onChange={(e) => setVLastName(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" htmlFor="contact-phone">Phone</label>
+                        <input
+                          id="contact-phone"
+                          type="tel"
+                          className="form-input"
+                          value={vPhone}
+                          onChange={(e) => setVPhone(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" htmlFor="contact-email">Email</label>
+                        <input
+                          id="contact-email"
+                          type="email"
+                          className="form-input"
+                          value={vEmail}
+                          onChange={(e) => setVEmail(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" htmlFor="contact-org">Organization</label>
+                        <input
+                          id="contact-org"
+                          type="text"
+                          className="form-input"
+                          value={vOrg}
+                          onChange={(e) => setVOrg(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" htmlFor="contact-web">Website</label>
+                        <input
+                          id="contact-web"
+                          type="url"
+                          className="form-input"
+                          value={vWebsite}
+                          onChange={(e) => setVWebsite(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 7. PDF FILE UPLOAD */}
+                {contentType === "pdf" && (
+                  <div>
+                    <label className="form-label" htmlFor="pdf-file-upload">Upload PDF Document</label>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                      <input
+                        id="pdf-file-upload"
+                        ref={pdfInputRef}
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(e) => handleCloudFileUpload(e, "pdf")}
+                        style={{ display: "none" }}
+                      />
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => pdfInputRef.current?.click()}
+                        style={{ flex: 1 }}
+                        disabled={isUploading}
+                      >
+                        {isUploading ? <div className="spinner" /> : "Choose PDF File"}
+                      </button>
+                    </div>
+                    {pdfUrl && (
+                      <div style={{ marginTop: 12, fontSize: 12, color: "var(--accent-green)", fontWeight: 600 }}>
+                        ✔ Active: {pdfName || "Document uploaded successfully"}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 8. AUDIO FILE UPLOAD */}
+                {contentType === "audio" && (
+                  <div>
+                    <label className="form-label" htmlFor="audio-file-upload">Upload Audio Track</label>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                      <input
+                        id="audio-file-upload"
+                        ref={audioInputRef}
+                        type="file"
+                        accept="audio/*"
+                        onChange={(e) => handleCloudFileUpload(e, "audio")}
+                        style={{ display: "none" }}
+                      />
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => audioInputRef.current?.click()}
+                        style={{ flex: 1 }}
+                        disabled={isUploading}
+                      >
+                        {isUploading ? <div className="spinner" /> : "Choose Audio File"}
+                      </button>
+                    </div>
+                    {audioUrl && (
+                      <div style={{ marginTop: 12, fontSize: 12, color: "var(--accent-green)", fontWeight: 600 }}>
+                        ✔ Active: {audioName || "Audio track uploaded successfully"}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
         </div>
@@ -866,9 +1246,9 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                 value={customStyle.moduleType}
                 onChange={(val) => setCustomStyle((p) => ({ ...p, moduleType: val }))}
                 options={[
-                  { value: "squares", label: "Squares", icon: icons.square, description: "Classic blocky pixels" },
-                  { value: "dots", label: "Dots", icon: icons.dot, description: "Elegant circular dot pixels" },
-                  { value: "rounded", label: "Rounded", icon: icons.rounded, description: "Soft smooth rounded squares" },
+                  { value: "squares", label: "Classic Squares", icon: icons.square, description: "Standard blocky pixel matrices, best for high scannability." },
+                  { value: "dots", label: "Modern Dots", icon: icons.dot, description: "Sleek circular dot pixels, offers a highly unique and clean design." },
+                  { value: "rounded", label: "Rounded Pixels", icon: icons.rounded, description: "Smooth rounded modules, creates a soft and organic tech layout." },
                 ]}
               />
 
@@ -880,9 +1260,9 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                   onChange={(val) => setCustomStyle((p) => ({ ...p, cornerOuter: val }))}
                   direction="up"
                   options={[
-                    { value: "squares", label: "Sharp Squares", icon: icons.outlineSquare, description: "Classic square outline" },
-                    { value: "rounded", label: "Rounded Rect", icon: icons.outlineRounded, description: "Soft cornered outline" },
-                    { value: "circle", label: "Circular Ring", icon: icons.outlineCircle, description: "Perfect ring outline" },
+                    { value: "squares", label: "Sharp Squares", icon: icons.outlineSquare, description: "Classic finder patterns with standard hard right-angled borders." },
+                    { value: "rounded", label: "Rounded Rect", icon: icons.outlineRounded, description: "Modern soft-cornered frames, balances structure with smooth lines." },
+                    { value: "circle", label: "Circular Ring", icon: icons.outlineCircle, description: "Trendy ring-shaped corner finders, gives a premium creative look." },
                   ]}
                 />
 
@@ -892,10 +1272,11 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                   value={customStyle.cornerInner}
                   onChange={(val) => setCustomStyle((p) => ({ ...p, cornerInner: val }))}
                   direction="up"
+                  align="right"
                   options={[
-                    { value: "squares", label: "Square Dot", icon: icons.square, description: "Sharp center block" },
-                    { value: "rounded", label: "Rounded Dot", icon: icons.rounded, description: "Smooth cornered block" },
-                    { value: "circle", label: "Circular Dot", icon: icons.dot, description: "Solid round sphere center" },
+                    { value: "squares", label: "Sharp Square Dot", icon: icons.square, description: "Standard solid square block in the center of the corner finders." },
+                    { value: "rounded", label: "Rounded Center Dot", icon: icons.rounded, description: "Smooth solid rounded block, aligns with curved module styles." },
+                    { value: "circle", label: "Circular Center Dot", icon: icons.dot, description: "Solid round sphere center, ideal for circular outer frames." },
                   ]}
                 />
               </div>
@@ -923,8 +1304,8 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                 value={customStyle.fgStyle}
                 onChange={(val) => setCustomStyle((p) => ({ ...p, fgStyle: val }))}
                 options={[
-                  { value: "solid", label: "Solid Color", icon: icons.solid, description: "Single solid flat shade" },
-                  { value: "gradient", label: "Gradient Mix", icon: icons.gradient, description: "Smooth blending colors" },
+                  { value: "solid", label: "Solid Fill Color", icon: icons.solid, description: "Applies a single custom solid flat shade across the entire QR matrix." },
+                  { value: "gradient", label: "Linear & Radial Gradient", icon: icons.gradient, description: "Blends two custom colors dynamically for an artistic, modern effect." },
                 ]}
               />
 
@@ -998,8 +1379,8 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                       onChange={(val) => setCustomStyle((p) => ({ ...p, gradientType: val }))}
                       direction="up"
                       options={[
-                        { value: "linear", label: "Linear", description: "Progressive direction strip" },
-                        { value: "radial", label: "Radial", description: "Circular outward bloom" },
+                        { value: "linear", label: "Linear Gradient Flow", description: "Colors transition along a straight path (horizontal, vertical, diagonal)." },
+                        { value: "radial", label: "Radial Gradient Glow", description: "Colors blend in a circular fashion radiating outward from the center." },
                       ]}
                     />
 
@@ -1009,10 +1390,11 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                         value={customStyle.gradientDir}
                         onChange={(val) => setCustomStyle((p) => ({ ...p, gradientDir: val }))}
                         direction="up"
+                        align="right"
                         options={[
-                          { value: "horizontal", label: "Left to Right", icon: icons.arrowRight },
-                          { value: "vertical", label: "Top to Bottom", icon: icons.arrowDown },
-                          { value: "diagonal", label: "Diagonal Slide", icon: icons.arrowRight },
+                          { value: "horizontal", label: "Horizontal Flow", icon: icons.arrowRight, description: "Gradient transitions smoothly from left to right." },
+                          { value: "vertical", label: "Vertical Flow", icon: icons.arrowDown, description: "Gradient transitions smoothly from top to bottom." },
+                          { value: "diagonal", label: "Diagonal Flow", icon: icons.arrowRight, description: "Gradient slides across the canvas from top-left to bottom-right." },
                         ]}
                       />
                     )}
@@ -1231,10 +1613,10 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                 value={customStyle.frameStyle}
                 onChange={(val) => setCustomStyle((p) => ({ ...p, frameStyle: val }))}
                 options={[
-                  { value: "none", label: "No Frame", description: "Raw QR code matrix only" },
-                  { value: "banner-bottom", label: "Bottom Banner", description: "Elegant text pill bar at bottom" },
-                  { value: "bubble", label: "Speech Bubble", description: "Creative bubble wrapper with tip" },
-                  { value: "elegant-border", label: "Elegant Border", description: "Full border frame with label bar" },
+                  { value: "none", label: "No Frame Layout", description: "Clean raw QR code matrix, suitable for minimalist designs." },
+                  { value: "banner-bottom", label: "Bottom Text Banner", description: "Encloses the QR code with a colored call-to-action bar at the bottom." },
+                  { value: "bubble", label: "Creative Speech Bubble", description: "Wraps the QR code in an interactive message bubble with a bottom pointer." },
+                  { value: "elegant-border", label: "Elegant Frame Outline", description: "Surrounds the canvas with a thick border outline and a bottom label bar." },
                 ]}
               />
 
@@ -1301,9 +1683,9 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                         value={customStyle.labelFont}
                         onChange={(val) => setCustomStyle((p) => ({ ...p, labelFont: val }))}
                         options={[
-                          { value: "sans-serif", label: "Sans-Serif" },
-                          { value: "serif", label: "Serif" },
-                          { value: "monospace", label: "Monospace" },
+                          { value: "sans-serif", label: "Sans-Serif Geometric", description: "Clean, modern typography without serifs, ideal for tech brands." },
+                          { value: "serif", label: "Classic Serif Type", description: "Traditional editorial typeface with decorative strokes, looks elegant." },
+                          { value: "monospace", label: "Technical Monospace", description: "Fixed-width terminal fonts, excellent for coding and developer aesthetics." },
                         ]}
                       />
                       <CustomDropdown
@@ -1311,12 +1693,13 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                         value={customStyle.labelFontSize}
                         onChange={(val) => setCustomStyle((p) => ({ ...p, labelFontSize: val }))}
                         direction="up"
+                        align="right"
                         options={[
-                          { value: 16, label: "16px" },
-                          { value: 20, label: "20px" },
-                          { value: 24, label: "24px" },
-                          { value: 28, label: "28px" },
-                          { value: 32, label: "32px" },
+                          { value: 16, label: "Small Font (16px)", description: "Discreet and compact lettering, keeps the layout subtle." },
+                          { value: 20, label: "Compact Font (20px)", description: "Balanced text sizing, fits short CTA prompts perfectly." },
+                          { value: 24, label: "Standard Font (24px)", description: "Standard lettering, readable from average scanning distances." },
+                          { value: 28, label: "Medium Font (28px)", description: "Prominent text sizing, stands out clearly around the QR." },
+                          { value: 32, label: "Large Font (32px)", description: "Bold and oversized lettering, emphasizes call-to-actions strongly." },
                         ]}
                       />
                     </div>
@@ -1331,10 +1714,10 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                             onChange={(val) => setCustomStyle((p) => ({ ...p, labelPosition: val }))}
                             direction="up"
                             options={[
-                              { value: "top", label: "Top Side", icon: icons.arrowUp },
-                              { value: "bottom", label: "Bottom Side", icon: icons.arrowDown },
-                              { value: "left", label: "Left Side", icon: icons.arrowLeft },
-                              { value: "right", label: "Right Side", icon: icons.arrowRight },
+                              { value: "top", label: "Top Alignment", icon: icons.arrowUp, description: "Places the custom text prompt directly above the QR code matrix." },
+                              { value: "bottom", label: "Bottom Alignment", icon: icons.arrowDown, description: "Places the custom text prompt directly below the QR code matrix." },
+                              { value: "left", label: "Left Side Alignment", icon: icons.arrowLeft, description: "Places the custom text prompt vertically on the left side of the QR." },
+                              { value: "right", label: "Right Side Alignment", icon: icons.arrowRight, description: "Places the custom text prompt vertically on the right side of the QR." },
                             ]}
                           />
                           <CustomDropdown
@@ -1342,9 +1725,10 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                             value={customStyle.labelOrientation}
                             onChange={(val) => setCustomStyle((p) => ({ ...p, labelOrientation: val }))}
                             direction="up"
+                            align="right"
                             options={[
-                              { value: "horizontal", label: "Horizontal" },
-                              { value: "vertical", label: "Vertical" },
+                              { value: "horizontal", label: "Horizontal Text Layout", description: "Standard reading alignment, letters read left to right." },
+                              { value: "vertical", label: "Vertical Text Layout", description: "Rotates the label text vertically, ideal for side-aligned prompts." },
                             ]}
                           />
                         </>
@@ -1382,10 +1766,10 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                   onChange={(val) => setCustomStyle((p) => ({ ...p, downloadSize: val }))}
                   direction="up"
                   options={[
-                    { value: 256, label: "256x256 px", description: "Standard resolution" },
-                    { value: 512, label: "512x512 px", description: "High Definition" },
-                    { value: 1024, label: "1024x1024 px", description: "Ultra HD Quality" },
-                    { value: 2048, label: "2048x2048 px", description: "Print Quality Vector" },
+                    { value: 256, label: "Standard (256px)", description: "Compact image size, optimal for lightweight web layouts." },
+                    { value: 512, label: "High Definition (512px)", description: "Sharp standard resolution, suitable for digital screens and cards." },
+                    { value: 1024, label: "Ultra HD (1024px)", description: "Super high resolution, perfect for medium print sizes." },
+                    { value: 2048, label: "Print Quality (2048px)", description: "Max-resolution layout, ideal for billboard posters and large prints." },
                   ]}
                 />
                 <CustomDropdown
@@ -1393,11 +1777,12 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                   value={customStyle.errorCorrection}
                   onChange={(val) => setCustomStyle((p) => ({ ...p, errorCorrection: val }))}
                   direction="up"
+                  align="right"
                   options={[
-                    { value: "L", label: "Low (7%)", description: "Best for simple text links" },
-                    { value: "M", label: "Medium (15%)", description: "Balanced resolution" },
-                    { value: "Q", label: "Quartile (25%)", description: "Strong correction resilience" },
-                    { value: "H", label: "High (30%)", description: "Best with inserted logos" },
+                    { value: "L", label: "Low Correction (7%)", description: "Fastest scanner response, best if the QR code is plain text." },
+                    { value: "M", label: "Medium Correction (15%)", description: "Standard safety buffer, recommended for simple URL links." },
+                    { value: "Q", label: "Quartile Correction (25%)", description: "High resilience, remains scannable even with minor scratches." },
+                    { value: "H", label: "High Correction (30%)", description: "Maximum safety buffer, essential when overlaying center branding logos." },
                   ]}
                 />
               </div>
@@ -1419,7 +1804,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
           </div>
           <div className="card-body">
             <div className="qr-preview-container">
-              {/* Preview Wrapper Container (shows checkered grid if transparent is enabled) */}
+              {/* Preview Wrapper Container */}
               <div className={`qr-canvas-wrapper ${customStyle.isTransparent ? "checkerboard-bg" : ""}`}>
                 {isGenerating && (
                   <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>
