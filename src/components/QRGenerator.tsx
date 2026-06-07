@@ -32,13 +32,15 @@ interface QRGeneratorProps {
 }
 
 interface CustomQRStyle {
-  moduleType: "squares" | "dots" | "rounded" | "diamonds" | "stars" | "lines";
+  moduleType: "squares" | "dots" | "rounded" | "diamonds" | "stars" | "lines" | "crosses" | "fluid" | "heart";
   cornerOuter: "squares" | "rounded" | "circle" | "leaf" | "shield" | "flower";
   cornerInner: "squares" | "rounded" | "circle" | "leaf" | "diamond";
   logoFile: string | null;
   logoScale: number;
   logoPadding: number;
   logoBgColor: string;
+  logoRadius?: number;
+  bgImageRadius?: number;
   labelText: string;
   labelPosition: "top" | "bottom" | "left" | "right";
   labelFontSize: number;
@@ -93,6 +95,8 @@ const defaultStyles: CustomQRStyle = {
   logoScale: 20,
   logoPadding: 6,
   logoBgColor: "#ffffff",
+  logoRadius: 8,
+  bgImageRadius: 0,
   labelText: "",
   labelPosition: "bottom",
   labelFontSize: 24,
@@ -285,6 +289,59 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
   const [isMobileView, setIsMobileView] = useState(false);
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(true);
   const [previewScale, setPreviewScale] = useState<"sm" | "md" | "lg">("sm");
+  const [previewWidth, setPreviewWidth] = useState(170);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isDesktopQualityOpen, setIsDesktopQualityOpen] = useState(false);
+  const [isMobileQualityOpen, setIsMobileQualityOpen] = useState(false);
+  const dragStartRef = useRef<{ x: number; width: number } | null>(null);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    // Prevent default touch scrolling when dragging to resize
+    if (e.cancelable) e.preventDefault();
+    setIsDragging(true);
+    const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    dragStartRef.current = { x: clientX, width: previewWidth };
+  }, [previewWidth]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      if (!dragStartRef.current) return;
+      const clientX = "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+      const deltaX = dragStartRef.current.x - clientX;
+      const newWidth = Math.min(320, Math.max(130, dragStartRef.current.width + deltaX));
+      setPreviewWidth(newWidth);
+    };
+
+    const handleEnd = () => {
+      setIsDragging(false);
+      dragStartRef.current = null;
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleEnd);
+    window.addEventListener("touchmove", handleMove, { passive: false });
+    window.addEventListener("touchend", handleEnd);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleEnd);
+      window.removeEventListener("touchmove", handleMove);
+      window.removeEventListener("touchend", handleEnd);
+    };
+  }, [isDragging]);
+
+  const PNG_SIZES = [256, 512, 1024, 2048] as const;
+  const handleQualitySelect = useCallback((size: typeof PNG_SIZES[number], isMobile: boolean) => {
+    setCustomStyle(prev => ({ ...prev, downloadSize: size }));
+    if (isMobile) {
+      setIsMobileQualityOpen(false);
+    } else {
+      setIsDesktopQualityOpen(false);
+    }
+    showToast(`Resolution set to ${size}x${size}px`, "success");
+  }, [showToast]);
 
   const toggleSection = (section: "content" | "shapes" | "colors" | "logo" | "frame") => {
     setOpenSection(openSection === section ? null : section);
@@ -306,21 +363,105 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
   }, []);
 
   // Load limits from localStorage
+  const getUserRole = useCallback((): "anon" | "free" | "pro" => {
+    if (!userEmail) return "anon";
+    if (typeof window === "undefined") return "free";
+    try {
+      const rolesMap = JSON.parse(localStorage.getItem("happyqr_user_roles") || "{}");
+      return rolesMap[userEmail] || "free";
+    } catch {
+      return "free";
+    }
+  }, [userEmail]);
+
+  const getLimit = useCallback((role: "anon" | "free" | "pro", type: "single" | "bulk" | "poster"): number => {
+    if (typeof window === "undefined") {
+      if (role === "anon") return type === "single" ? 3 : 0;
+      if (role === "free") return type === "single" ? 10 : type === "bulk" ? 5 : 2;
+      return type === "single" ? 100 : type === "bulk" ? 100 : 10;
+    }
+    const key = `happyqr_limit_${type}_${role}`;
+    const val = localStorage.getItem(key);
+    if (val !== null) return Number(val);
+    
+    // Fallbacks
+    if (role === "anon") {
+      if (type === "single") {
+        return Number(localStorage.getItem("happyqr_limit_anon") || "3");
+      }
+      return 0;
+    }
+    if (role === "free") {
+      return type === "single" ? 10 : type === "bulk" ? 5 : 2;
+    }
+    return type === "single" ? 100 : type === "bulk" ? 100 : 10;
+  }, []);
+
+  const getDailyUsage = useCallback((type: "single" | "bulk" | "poster"): number => {
+    if (!userEmail || typeof window === "undefined") return 0;
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const usageObj = JSON.parse(localStorage.getItem("happyqr_daily_usage") || "{}");
+      return usageObj[userEmail]?.[today]?.[type] || 0;
+    } catch {
+      return 0;
+    }
+  }, [userEmail]);
+
+  const incrementDailyUsage = useCallback((type: "single" | "bulk" | "poster", amount: number = 1) => {
+    if (!userEmail || typeof window === "undefined") return;
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const usageObj = JSON.parse(localStorage.getItem("happyqr_daily_usage") || "{}");
+      if (!usageObj[userEmail]) usageObj[userEmail] = {};
+      if (!usageObj[userEmail][today]) usageObj[userEmail][today] = {};
+      const current = usageObj[userEmail][today][type] || 0;
+      usageObj[userEmail][today][type] = current + amount;
+      localStorage.setItem("happyqr_daily_usage", JSON.stringify(usageObj));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [userEmail]);
+
   const getAnonGenCount = (): number => {
     if (typeof window === "undefined") return 0;
     return Number(localStorage.getItem("happyqr_anon_generations") || "0");
-  };
-
-  const getAnonLimit = (): number => {
-    if (typeof window === "undefined") return 1;
-    return Number(localStorage.getItem("happyqr_limit_anon") || "1");
   };
 
   const incrementAnonGenCount = () => {
     localStorage.setItem("happyqr_anon_generations", String(getAnonGenCount() + 1));
   };
 
-  const isLimitReached = !userEmail && getAnonGenCount() >= getAnonLimit();
+  const currentRole = getUserRole();
+  const limitMax = getLimit(currentRole, "single");
+  const currentGenCount = currentRole === "anon" ? getAnonGenCount() : getDailyUsage("single");
+  const isLimitReached = currentGenCount >= limitMax;
+
+  const getLimitToastMessage = (): string => {
+    const role = getUserRole();
+    if (role === "anon") {
+      return "Anonymous limit reached. Please login to generate more QR codes.";
+    }
+    if (role === "free") {
+      return `Daily limit reached for Free users (${getLimit("free", "single")} per day). Please upgrade to PRO.`;
+    }
+    return `Daily limit reached for PRO users (${getLimit("pro", "single")} per day).`;
+  };
+
+  const handleUpgradeToProDirectly = () => {
+    if (!userEmail) return;
+    try {
+      const rolesMap = JSON.parse(localStorage.getItem("happyqr_user_roles") || "{}");
+      rolesMap[userEmail] = "pro";
+      localStorage.setItem("happyqr_user_roles", JSON.stringify(rolesMap));
+      showToast("Upgraded to PRO! Daily limits updated.", "success");
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch {
+      showToast("Upgrade failed.", "error");
+    }
+  };
 
   // Handle PDF/Audio Uploads using secure backend ImageKit api
   const handleCloudFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "pdf" | "audio") => {
@@ -550,6 +691,12 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         });
         ctx.save();
         ctx.globalAlpha = customStyle.bgImageOpacity;
+        const bgRadius = customStyle.bgImageRadius ?? 0;
+        if (bgRadius > 0) {
+          ctx.beginPath();
+          ctx.roundRect(extraLeft, extraTop, baseQRSize, baseQRSize, bgRadius);
+          ctx.clip();
+        }
         ctx.drawImage(bgImg, extraLeft, extraTop, baseQRSize, baseQRSize);
         ctx.restore();
       }
@@ -637,6 +784,24 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
               drawStar(ctx, x + cellSize / 2, y + cellSize / 2, 5, cellSize * 0.48, cellSize * 0.2);
             } else if (customStyle.moduleType === "lines") {
               ctx.fillRect(x + cellSize * 0.15, y, cellSize * 0.7, cellSize);
+            } else if (customStyle.moduleType === "crosses") {
+              ctx.fillRect(x + cellSize * 0.375, y, cellSize * 0.25, cellSize);
+              ctx.fillRect(x, y + cellSize * 0.375, cellSize, cellSize * 0.25);
+            } else if (customStyle.moduleType === "fluid") {
+              ctx.beginPath();
+              ctx.arc(x + cellSize / 2, y + cellSize / 2, cellSize * 0.58, 0, 2 * Math.PI);
+              ctx.fill();
+            } else if (customStyle.moduleType === "heart") {
+              ctx.beginPath();
+              const hx = x + cellSize / 2;
+              const hy = y + cellSize * 0.15;
+              const hW = cellSize * 0.8;
+              const hH = cellSize * 0.85;
+              ctx.moveTo(hx, hy + hH * 0.3);
+              ctx.bezierCurveTo(hx - hW * 0.45, hy - hH * 0.15, hx - hW * 0.65, hy + hH * 0.45, hx, hy + hH);
+              ctx.bezierCurveTo(hx + hW * 0.65, hy + hH * 0.45, hx + hW * 0.45, hy - hH * 0.15, hx, hy + hH * 0.3);
+              ctx.closePath();
+              ctx.fill();
             }
           }
         }
@@ -698,18 +863,35 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
           const r = size - cellSize;
           const left = x + cellSize / 2;
           const top = y + cellSize / 2;
+          const cx = left + r / 2;
           ctx.beginPath();
-          ctx.moveTo(left, top + r * 0.3);
-          ctx.quadraticCurveTo(left + r / 2, top, left + r, top + r * 0.3);
-          ctx.lineTo(left + r, top + r * 0.7);
-          ctx.quadraticCurveTo(left + r, top + r, left + r / 2, top + r);
-          ctx.quadraticCurveTo(left, top + r, left, top + r * 0.7);
+          ctx.moveTo(left, top);
+          ctx.lineTo(left + r, top);
+          ctx.lineTo(left + r, top + r * 0.5);
+          ctx.quadraticCurveTo(left + r, top + r * 0.85, cx, top + r);
+          ctx.quadraticCurveTo(left, top + r * 0.85, left, top + r * 0.5);
           ctx.closePath();
           ctx.stroke();
         } else if (customStyle.cornerOuter === "flower") {
           const r = size - cellSize;
+          const left = x + cellSize / 2;
+          const top = y + cellSize / 2;
+          const cx = left + r / 2;
+          const cy = top + r / 2;
+          const outerR = r / 2;
           ctx.beginPath();
-          ctx.roundRect(x + cellSize / 2, y + cellSize / 2, r, r, [cellSize * 1.5, cellSize * 1.5, cellSize * 1.5, cellSize * 1.5]);
+          for (let angle = 0; angle < 2 * Math.PI + 0.05; angle += 0.05) {
+            const petalFactor = 0.15;
+            const currentR = outerR * (1 - petalFactor + petalFactor * Math.cos(8 * angle));
+            const px = cx + currentR * Math.cos(angle);
+            const py = cy + currentR * Math.sin(angle);
+            if (angle === 0) {
+              ctx.moveTo(px, py);
+            } else {
+              ctx.lineTo(px, py);
+            }
+          }
+          ctx.closePath();
           ctx.stroke();
         }
 
@@ -754,13 +936,21 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         const logoX = startX + qrGridSize / 2 - logoWidth / 2;
         const logoY = startY + qrGridSize / 2 - logoHeight / 2;
 
+        ctx.save();
         ctx.fillStyle = customStyle.logoBgColor;
         const pad = customStyle.logoPadding;
+        const radius = customStyle.logoRadius ?? 8;
+        
         ctx.beginPath();
-        ctx.roundRect(logoX - pad, logoY - pad, logoWidth + pad * 2, logoHeight + pad * 2, 8);
+        ctx.roundRect(logoX - pad, logoY - pad, logoWidth + pad * 2, logoHeight + pad * 2, radius);
         ctx.fill();
 
+        // Clip the logo image concentric to the outer background
+        ctx.beginPath();
+        ctx.roundRect(logoX, logoY, logoWidth, logoHeight, Math.max(0, radius - pad));
+        ctx.clip();
         ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
+        ctx.restore();
       }
 
       if (customStyle.frameStyle !== "none" && customStyle.labelText.trim()) {
@@ -1320,8 +1510,8 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
 
   const handleDownloadPNG = () => {
     if (isLimitReached) {
-      showToast("Anon limit reached. Please Login to generate unlimited QR codes.", "error");
-      onLoginClick();
+      showToast(getLimitToastMessage(), "error");
+      if (getUserRole() === "anon") onLoginClick();
       return;
     }
 
@@ -1333,13 +1523,14 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
     showToast("PNG downloaded!", "success");
 
     if (!userEmail) incrementAnonGenCount();
+    else incrementDailyUsage("single");
     saveToHistory();
   };
 
   const handleDownloadSVG = async () => {
     if (isLimitReached) {
-      showToast("Anon limit reached. Please Login to generate unlimited QR codes.", "error");
-      onLoginClick();
+      showToast(getLimitToastMessage(), "error");
+      if (getUserRole() === "anon") onLoginClick();
       return;
     }
 
@@ -1362,6 +1553,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
       showToast("SVG downloaded!", "success");
 
       if (!userEmail) incrementAnonGenCount();
+      else incrementDailyUsage("single");
       saveToHistory("svg", svgStr);
     } catch {
       showToast("SVG export failed.", "error");
@@ -1370,8 +1562,8 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
 
   const handleCopyPNG = async () => {
     if (isLimitReached) {
-      showToast("Anon limit reached. Please Login to copy QR image.", "error");
-      onLoginClick();
+      showToast(getLimitToastMessage(), "error");
+      if (getUserRole() === "anon") onLoginClick();
       return;
     }
 
@@ -1381,6 +1573,9 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
       const blob = await res.blob();
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
       showToast("QR image copied to clipboard!", "success");
+      
+      if (!userEmail) incrementAnonGenCount();
+      else incrementDailyUsage("single");
     } catch {
       showToast("Copy failed — use download instead.", "error");
     }
@@ -1468,6 +1663,39 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
           <rect x="13" y="2" width="7" height="38" rx="1.5"/>
           <rect x="24" y="2" width="7" height="38" rx="1.5"/>
           <rect x="35" y="2" width="7" height="38" rx="1.5"/>
+        </svg>
+      ),
+    },
+    {
+      value: "crosses", label: "Crosses",
+      preview: (
+        <svg width="42" height="42" viewBox="0 0 42 42" fill="currentColor">
+          <rect x="5" y="2" width="2" height="8"/><rect x="2" y="5" width="8" height="2"/>
+          <rect x="15" y="2" width="2" height="8"/><rect x="12" y="5" width="8" height="2"/>
+          <rect x="25" y="2" width="2" height="8"/><rect x="22" y="5" width="8" height="2"/>
+          <rect x="35" y="2" width="2" height="8"/><rect x="32" y="5" width="8" height="2"/>
+          <rect x="5" y="12" width="2" height="8"/><rect x="2" y="15" width="8" height="2"/>
+          <rect x="25" y="12" width="2" height="8"/><rect x="22" y="15" width="8" height="2"/>
+        </svg>
+      ),
+    },
+    {
+      value: "fluid", label: "Fluid",
+      preview: (
+        <svg width="42" height="42" viewBox="0 0 42 42" fill="currentColor">
+          <circle cx="6" cy="6" r="5.8"/><circle cx="15" cy="6" r="5.8"/><circle cx="24" cy="6" r="5.8"/><circle cx="33" cy="6" r="5.8"/>
+          <circle cx="6" cy="15" r="5.8"/><circle cx="24" cy="15" r="5.8"/>
+          <circle cx="6" cy="24" r="5.8"/><circle cx="15" cy="24" r="5.8"/><circle cx="33" cy="24" r="5.8"/>
+        </svg>
+      ),
+    },
+    {
+      value: "heart", label: "Heart",
+      preview: (
+        <svg width="42" height="42" viewBox="0 0 42 42" fill="currentColor">
+          <path d="M10 4 C9 2, 7 2, 5 4 C3.5 5.5, 3.5 8, 6 10 L10 14 L14 10 C16.5 8, 16.5 5.5, 15 4 C13 2, 11 2, 10 4 Z"/>
+          <path d="M26 4 C25 2, 23 2, 21 4 C19.5 5.5, 19.5 8, 22 10 L26 14 L30 10 C32.5 8, 32.5 5.5, 31 4 C29 2, 27 2, 26 4 Z"/>
+          <path d="M10 20 C9 18, 7 18, 5 20 C3.5 21.5, 3.5 24, 6 26 L10 30 L14 26 C16.5 24, 16.5 21.5, 15 20 C13 18, 11 18, 10 20 Z"/>
         </svg>
       ),
     },
@@ -1996,30 +2224,41 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
 
           {/* Expanded: full preview panel */}
           {mobilePreviewOpen && (
-            <div className={`qr-float-panel scale-${previewScale}`}>
+            <div 
+              className={`qr-float-panel ${isDragging ? "is-dragging" : ""}`} 
+              style={{ width: `${previewWidth}px` }}
+            >
+              {/* Resize handle in the top-left corner */}
+              <div 
+                className="qr-float-resize-handle" 
+                onMouseDown={handleResizeStart} 
+                onTouchStart={handleResizeStart}
+                title="Drag to resize"
+              />
+
               <div className="qr-float-panel-header">
-                <span className="qr-float-panel-title">QR Preview</span>
+                <span className="qr-float-panel-title" style={{ paddingLeft: "14px" }}>QR Preview</span>
                 <div className="qr-float-size-control">
                   <button
                     type="button"
-                    className={`size-btn ${previewScale === "sm" ? "active" : ""}`}
-                    onClick={() => setPreviewScale("sm")}
+                    className={`size-btn ${previewWidth === 170 ? "active" : ""}`}
+                    onClick={() => { setPreviewScale("sm"); setPreviewWidth(170); }}
                     title="Small Size"
                   >
                     S
                   </button>
                   <button
                     type="button"
-                    className={`size-btn ${previewScale === "md" ? "active" : ""}`}
-                    onClick={() => setPreviewScale("md")}
+                    className={`size-btn ${previewWidth === 220 ? "active" : ""}`}
+                    onClick={() => { setPreviewScale("md"); setPreviewWidth(220); }}
                     title="Medium Size"
                   >
                     M
                   </button>
                   <button
                     type="button"
-                    className={`size-btn ${previewScale === "lg" ? "active" : ""}`}
-                    onClick={() => setPreviewScale("lg")}
+                    className={`size-btn ${previewWidth === 270 ? "active" : ""}`}
+                    onClick={() => { setPreviewScale("lg"); setPreviewWidth(270); }}
                     title="Large Size"
                   >
                     L
@@ -2052,8 +2291,76 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                     </div>
                   )}
                 </div>
-                <div className="qr-actions" style={{ marginTop: 12, display: "flex", gap: 6 }}>
-                  <button className="btn btn-primary" style={{ flex: 1, padding: "6px 8px", fontSize: "11px", height: "32px" }} disabled={!qrDataUrl} onClick={handleDownloadPNG}>PNG</button>
+                <div className="qr-actions" style={{ marginTop: 12, display: "flex", gap: 6, position: "relative" }}>
+                  <div style={{ display: "flex", flex: 1, position: "relative" }}>
+                    <button 
+                      className="btn btn-primary" 
+                      style={{ flex: 1, padding: "6px 4px", fontSize: "10px", height: "32px", borderTopRightRadius: 0, borderBottomRightRadius: 0 }} 
+                      disabled={!qrDataUrl} 
+                      onClick={handleDownloadPNG}
+                    >
+                      PNG ({customStyle.downloadSize})
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      style={{
+                        padding: "0 6px",
+                        height: "32px",
+                        borderTopLeftRadius: 0,
+                        borderBottomLeftRadius: 0,
+                        borderLeft: "1px solid rgba(255, 255, 255, 0.2)",
+                      }}
+                      disabled={!qrDataUrl}
+                      onClick={() => setIsMobileQualityOpen(!isMobileQualityOpen)}
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+                    {isMobileQualityOpen && (
+                      <div
+                        className="custom-dropdown-menu"
+                        style={{
+                          position: "absolute",
+                          bottom: "calc(100% + 6px)",
+                          right: 0,
+                          zIndex: 1000,
+                          width: "140px",
+                          background: "var(--bg-card)",
+                          border: "1px solid var(--border-default)",
+                          borderRadius: "var(--radius-md)",
+                          padding: "4px",
+                          boxShadow: "var(--shadow-lg)",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "2px",
+                        }}
+                      >
+                        {PNG_SIZES.map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            className={`custom-dropdown-item ${customStyle.downloadSize === size ? "selected" : ""}`}
+                            style={{
+                              padding: "6px 8px",
+                              fontSize: "11px",
+                              textAlign: "left",
+                              width: "100%",
+                              background: customStyle.downloadSize === size ? "var(--bg-elevated)" : "transparent",
+                              color: "var(--text-primary)",
+                              border: "none",
+                              borderRadius: "var(--radius-sm)",
+                              cursor: "pointer",
+                            }}
+                            onClick={() => handleQualitySelect(size, true)}
+                          >
+                            {size}px {size === 2048 ? "(HD)" : ""}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button className="btn btn-secondary" style={{ flex: 1, padding: "6px 8px", fontSize: "11px", height: "32px" }} disabled={!text.trim()} onClick={handleDownloadSVG}>SVG</button>
                   <button className="btn btn-ghost" style={{ padding: "6px 10px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center" }} disabled={!qrDataUrl} onClick={handleCopyPNG}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -2092,15 +2399,28 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
           >
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <AlertCircle size={16} style={{ flexShrink: 0 }} />
-              Anonymous limit reached. Sign in for unlimited QR codes!
+              {currentRole === "anon" && "Anonymous limit reached. Sign in for more QR codes!"}
+              {currentRole === "free" && `Daily generation limit reached for Free users (${limitMax} per day). Upgrade to PRO!`}
+              {currentRole === "pro" && `Daily generation limit reached for PRO users (${limitMax} per day).`}
             </span>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={onLoginClick}
-              style={{ height: "26px", fontSize: "11px", padding: "0 10px" }}
-            >
-              Sign In
-            </button>
+            {currentRole === "anon" && (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={onLoginClick}
+                style={{ height: "26px", fontSize: "11px", padding: "0 10px" }}
+              >
+                Sign In
+              </button>
+            )}
+            {currentRole === "free" && (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={handleUpgradeToProDirectly}
+                style={{ height: "26px", fontSize: "11px", padding: "0 10px", background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#fff", border: "none" }}
+              >
+                Upgrade to PRO
+              </button>
+            )}
           </div>
         )}
 
@@ -2803,6 +3123,22 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                     </div>
 
                     <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Logo Corner Radius ({customStyle.logoRadius ?? 8}px)</label>
+                      <div className="slider-row">
+                        <input
+                          type="range"
+                          className="form-slider"
+                          min={0}
+                          max={24}
+                          step={1}
+                          value={customStyle.logoRadius ?? 8}
+                          onChange={(e) => setCustomStyle((p) => ({ ...p, logoRadius: Number(e.target.value) }))}
+                        />
+                        <span className="slider-value">{customStyle.logoRadius ?? 8}px</span>
+                      </div>
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label" htmlFor="logo-bg-color">Logo Backing Cover Color</label>
                       <div className="color-picker-row">
                         <input
@@ -2867,6 +3203,22 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                             onChange={(e) => setCustomStyle((p) => ({ ...p, bgImageOpacity: Number(e.target.value) }))}
                           />
                           <span className="slider-value">{Math.round(customStyle.bgImageOpacity * 100)}%</span>
+                        </div>
+                      </div>
+
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">Background Image Corner Radius ({customStyle.bgImageRadius ?? 0}px)</label>
+                        <div className="slider-row">
+                          <input
+                            type="range"
+                            className="form-slider"
+                            min={0}
+                            max={40}
+                            step={1}
+                            value={customStyle.bgImageRadius ?? 0}
+                            onChange={(e) => setCustomStyle((p) => ({ ...p, bgImageRadius: Number(e.target.value) }))}
+                          />
+                          <span className="slider-value">{customStyle.bgImageRadius ?? 0}px</span>
                         </div>
                       </div>
                     </div>
@@ -3138,15 +3490,81 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
 
                 {/* Action buttons */}
                 <div className="qr-actions">
-                  <button
-                    id="btn-qr-dl-png"
-                    className="btn btn-primary"
-                    style={{ flex: 1 }}
-                    disabled={!qrDataUrl}
-                    onClick={handleDownloadPNG}
-                  >
-                    Download PNG
-                  </button>
+                  <div style={{ display: "flex", flex: 1, position: "relative" }}>
+                    <button
+                      id="btn-qr-dl-png"
+                      className="btn btn-primary"
+                      style={{ flex: 1, borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+                      disabled={!qrDataUrl}
+                      onClick={handleDownloadPNG}
+                    >
+                      Download PNG ({customStyle.downloadSize}px)
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      style={{
+                        padding: "0 10px",
+                        borderTopLeftRadius: 0,
+                        borderBottomLeftRadius: 0,
+                        borderLeft: "1px solid rgba(255, 255, 255, 0.2)",
+                      }}
+                      disabled={!qrDataUrl}
+                      onClick={() => setIsDesktopQualityOpen(!isDesktopQualityOpen)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+                    
+                    {isDesktopQualityOpen && (
+                      <div
+                        className="custom-dropdown-menu"
+                        style={{
+                          position: "absolute",
+                          bottom: "calc(100% + 6px)",
+                          right: 0,
+                          zIndex: 1000,
+                          width: "180px",
+                          background: "var(--bg-card)",
+                          border: "1px solid var(--border-default)",
+                          borderRadius: "var(--radius-md)",
+                          padding: "4px",
+                          boxShadow: "var(--shadow-lg)",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "2px",
+                        }}
+                      >
+                        <div style={{ fontSize: "10px", fontWeight: 700, color: "var(--text-tertiary)", padding: "6px 8px", textTransform: "uppercase" }}>PNG Quality</div>
+                        {PNG_SIZES.map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            className={`custom-dropdown-item ${customStyle.downloadSize === size ? "selected" : ""}`}
+                            style={{
+                              padding: "6px 12px",
+                              fontSize: "12px",
+                              textAlign: "left",
+                              width: "100%",
+                              background: customStyle.downloadSize === size ? "var(--bg-elevated)" : "transparent",
+                              color: "var(--text-primary)",
+                              border: "none",
+                              borderRadius: "var(--radius-sm)",
+                              cursor: "pointer",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center"
+                            }}
+                            onClick={() => handleQualitySelect(size, false)}
+                          >
+                            <span>{size} x {size} px</span>
+                            {size === 2048 && <span style={{ fontSize: "8px", background: "var(--accent-blue-muted)", color: "var(--accent-blue)", padding: "1px 4px", borderRadius: "3px" }}>Pro</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button
                     id="btn-qr-dl-svg"
                     className="btn btn-secondary"

@@ -25,7 +25,30 @@ export default function Navbar({
 }: NavbarProps) {
   const isAdmin = userEmail === "shashank8808108802@gmail.com";
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [userRole, setUserRole] = useState<"free" | "pro">("free");
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const loadUserRole = () => {
+    if (!userEmail) return;
+    try {
+      const rolesMap = JSON.parse(localStorage.getItem("happyqr_user_roles") || "{}");
+      setUserRole(rolesMap[userEmail] || "free");
+    } catch {
+      setUserRole("free");
+    }
+  };
+
+  useEffect(() => {
+    loadUserRole();
+  }, [userEmail]);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      loadUserRole();
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [userEmail]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -118,19 +141,54 @@ export default function Navbar({
 
         {/* User Session buttons */}
         {userEmail ? (
-          <div style={{ position: "relative" }} ref={menuRef}>
+          <div style={{ position: "relative", display: "flex", alignItems: "center", gap: "8px" }} ref={menuRef}>
+            <span className={`role-badge role-badge-${userRole}`}>
+              {userRole}
+            </span>
             <button
               className="user-menu-avatar-btn"
               onClick={() => setShowUserMenu(!showUserMenu)}
-              title={userEmail}
+              title={`${userEmail} (${userRole.toUpperCase()})`}
             >
               {userEmail[0].toUpperCase()}
             </button>
             {showUserMenu && (
               <div className="user-dropdown-menu">
-                <div className="user-dropdown-header">
+                <div className="user-dropdown-header" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                   <span className="user-dropdown-email">{userEmail}</span>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "4px" }}>
+                    <span style={{ fontSize: "11px", color: "var(--text-tertiary)" }}>Account Tier:</span>
+                    <span className={`role-badge role-badge-${userRole}`} style={{ margin: 0 }}>
+                      {userRole}
+                    </span>
+                  </div>
                 </div>
+                <div className="user-dropdown-divider" />
+                <button
+                  type="button"
+                  className="user-dropdown-item"
+                  style={{ color: "var(--accent-blue)" }}
+                  onClick={() => {
+                    const nextRole = userRole === "free" ? "pro" : "free";
+                    try {
+                      const rolesMap = JSON.parse(localStorage.getItem("happyqr_user_roles") || "{}");
+                      rolesMap[userEmail] = nextRole;
+                      localStorage.setItem("happyqr_user_roles", JSON.stringify(rolesMap));
+                      setUserRole(nextRole);
+                      window.dispatchEvent(new Event("storage"));
+                      setTimeout(() => {
+                        window.location.reload();
+                      }, 500);
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: 6 }}>
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                  {userRole === "free" ? "Upgrade to PRO" : "Revert to Free"}
+                </button>
                 <div className="user-dropdown-divider" />
                 <button
                   className="user-dropdown-item logout-btn"

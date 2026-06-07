@@ -9,6 +9,8 @@ import { AlertTriangle, Download } from "lucide-react";
 interface BulkGeneratorProps {
   onGenerate: (entries: QRHistoryEntry[]) => void;
   showToast: (message: string, type?: Toast["type"]) => void;
+  userEmail: string | null;
+  onLoginClick: () => void;
 }
 
 const defaultSettings: QRSettings = {
@@ -27,7 +29,7 @@ interface BulkItem {
   status: "pending" | "done" | "error";
 }
 
-export default function BulkGenerator({ onGenerate, showToast }: BulkGeneratorProps) {
+export default function BulkGenerator({ onGenerate, showToast, userEmail, onLoginClick }: BulkGeneratorProps) {
   const [rawInput, setRawInput] = useState("");
   const [settings, setSettings] = useState<QRSettings>(defaultSettings);
   const [items, setItems] = useState<BulkItem[]>([]);
@@ -35,7 +37,32 @@ export default function BulkGenerator({ onGenerate, showToast }: BulkGeneratorPr
   const [progress, setProgress] = useState(0);
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  const getUserRole = (): "anon" | "free" | "pro" => {
+    if (!userEmail) return "anon";
+    if (typeof window === "undefined") return "free";
+    try {
+      const rolesMap = JSON.parse(localStorage.getItem("happyqr_user_roles") || "{}");
+      return rolesMap[userEmail] || "free";
+    } catch {
+      return "free";
+    }
+  };
+
+  const getBulkLimit = (): number => {
+    if (typeof window === "undefined") return 0;
+    const role = getUserRole();
+    const key = `happyqr_limit_bulk_${role}`;
+    const val = localStorage.getItem(key);
+    if (val !== null) return Number(val);
+    if (role === "anon") return 0;
+    if (role === "free") return 5;
+    return 100;
+  };
+
   const parsedLines = rawInput.split("\n").map((l) => l.trim()).filter(Boolean);
+  const role = getUserRole();
+  const bulkLimit = getBulkLimit();
+  const isLimitReached = parsedLines.length > bulkLimit;
 
   // Ensure offscreen canvas exists
   const getCanvas = () => {
@@ -50,8 +77,9 @@ export default function BulkGenerator({ onGenerate, showToast }: BulkGeneratorPr
       showToast("Add at least one URL or text per line.", "error");
       return;
     }
-    if (parsedLines.length > 100) {
-      showToast("Maximum 100 items per bulk batch.", "error");
+    const bulkLimit = getBulkLimit();
+    if (parsedLines.length > bulkLimit) {
+      showToast(`Limit exceeded. Max ${bulkLimit} items allowed for your current role.`, "error");
       return;
     }
 
@@ -173,13 +201,70 @@ export default function BulkGenerator({ onGenerate, showToast }: BulkGeneratorPr
               </div>
             )}
 
+            {isLimitReached && (
+              <div
+                style={{
+                  background: "rgba(239, 68, 68, 0.1)",
+                  border: "1px solid rgba(239, 68, 68, 0.2)",
+                  color: "var(--accent-red)",
+                  padding: "10px 14px",
+                  borderRadius: "var(--radius-md)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  marginBottom: "16px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "10px",
+                }}
+              >
+                <span>
+                  {role === "anon" && "Bulk QR Generation is not allowed for Guests. Please Sign In."}
+                  {role === "free" && `Bulk generation is limited to ${bulkLimit} items for Free users. (You entered ${parsedLines.length} items).`}
+                </span>
+                {role === "anon" ? (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={onLoginClick}
+                    style={{ height: "24px", fontSize: "11px", padding: "0 8px" }}
+                  >
+                    Sign In
+                  </button>
+                ) : (
+                  role === "free" && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => {
+                        try {
+                          const rolesMap = JSON.parse(localStorage.getItem("happyqr_user_roles") || "{}");
+                          if (userEmail) {
+                            rolesMap[userEmail] = "pro";
+                            localStorage.setItem("happyqr_user_roles", JSON.stringify(rolesMap));
+                            showToast("Upgraded to PRO! Bulk limits updated.", "success");
+                            setTimeout(() => window.location.reload(), 500);
+                          }
+                        } catch {
+                          showToast("Upgrade failed.", "error");
+                        }
+                      }}
+                      style={{ height: "24px", fontSize: "11px", padding: "0 8px", background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#fff", border: "none" }}
+                    >
+                      Upgrade to PRO
+                    </button>
+                  )
+                )}
+              </div>
+            )}
+
             <div style={{ display: "flex", gap: 10 }}>
               <button
                 id="bulk-generate"
                 className="btn btn-primary btn-lg"
                 style={{ flex: 1 }}
                 onClick={handleGenerate}
-                disabled={isGenerating || !parsedLines.length || parsedLines.length > 100}
+                disabled={isGenerating || !parsedLines.length || parsedLines.length > 100 || isLimitReached}
               >
                 {isGenerating ? (
                   <><div className="spinner" /> Generating {progress}%</>

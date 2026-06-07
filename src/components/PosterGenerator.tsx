@@ -110,16 +110,36 @@ export default function PosterGenerator({ showToast, userEmail, onLoginClick }: 
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Daily poster limit state (defaults to 2 per day)
+  // Daily poster limit state
   const [dailyCount, setDailyCount] = useState(0);
 
-  const todayStr = new Date().toISOString().split("T")[0];
-  const storageKey = userEmail ? `happyqr_poster_count_${userEmail}_${todayStr}` : "";
+  const getUserRole = (): "anon" | "free" | "pro" => {
+    if (!userEmail) return "anon";
+    if (typeof window === "undefined") return "free";
+    try {
+      const rolesMap = JSON.parse(localStorage.getItem("happyqr_user_roles") || "{}");
+      return rolesMap[userEmail] || "free";
+    } catch {
+      return "free";
+    }
+  };
 
   const getPosterLimit = (): number => {
-    if (typeof window === "undefined") return 2;
-    return Number(localStorage.getItem("happyqr_limit_poster") || "2");
+    if (typeof window === "undefined") return 0;
+    const role = getUserRole();
+    const key = `happyqr_limit_poster_${role}`;
+    const val = localStorage.getItem(key);
+    if (val !== null) return Number(val);
+    if (role === "anon") return 0;
+    if (role === "free") return 2;
+    return 10;
   };
+
+  const currentRole = getUserRole();
+  const todayStr = new Date().toISOString().split("T")[0];
+  const storageKey = currentRole === "anon" 
+    ? `happyqr_poster_count_anon_${todayStr}`
+    : `happyqr_poster_count_${userEmail}_${todayStr}`;
 
   useEffect(() => {
     if (typeof window !== "undefined" && storageKey) {
@@ -146,10 +166,17 @@ export default function PosterGenerator({ showToast, userEmail, onLoginClick }: 
     setBgImageSrc(null); // Clear previous AI background
   };
 
-  // Generate background using API
   const handleGenerateAIBackground = async () => {
     if (isLimitReached) {
-      showToast("Daily Poster Art limit reached (max 2 per day). Come back tomorrow!", "error");
+      const role = getUserRole();
+      if (role === "anon") {
+        showToast("Guests are not allowed to generate AI background posters. Please sign in.", "error");
+        onLoginClick();
+      } else if (role === "free") {
+        showToast(`Daily Poster Art limit reached for Free users (max ${getPosterLimit()} per day). Upgrade to PRO!`, "error");
+      } else {
+        showToast(`Daily limit reached for PRO users (max ${getPosterLimit()} per day).`, "error");
+      }
       return;
     }
 
@@ -346,7 +373,7 @@ export default function PosterGenerator({ showToast, userEmail, onLoginClick }: 
               color: isLimitReached ? "var(--accent-red)" : "var(--accent-green)",
             }}
           >
-            {getPosterLimit() - dailyCount} generations left today
+            {currentRole === "anon" ? "Login for AI Art" : `${Math.max(0, getPosterLimit() - dailyCount)} generations left today`}
           </span>
         </div>
         <div className="card-body">
@@ -361,12 +388,52 @@ export default function PosterGenerator({ showToast, userEmail, onLoginClick }: 
                 fontSize: "12px",
                 fontWeight: 600,
                 marginBottom: "20px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "10px",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <AlertCircle size={16} style={{ flexShrink: 0 }} />
-                <span>Daily limit reached. You have generated {getPosterLimit()} AI backgrounds today. Come back tomorrow!</span>
+                <span>
+                  {currentRole === "anon" && "Guests are not allowed to generate AI poster art backgrounds. Please Sign In."}
+                  {currentRole === "free" && `Daily generation limit reached for Free users (max ${getPosterLimit()} per day). Upgrade to PRO!`}
+                  {currentRole === "pro" && `Daily generation limit reached for PRO users (max ${getPosterLimit()} per day).`}
+                </span>
               </div>
+              {currentRole === "anon" && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={onLoginClick}
+                  style={{ height: "24px", fontSize: "11px", padding: "0 8px" }}
+                >
+                  Sign In
+                </button>
+              )}
+              {currentRole === "free" && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    try {
+                      const rolesMap = JSON.parse(localStorage.getItem("happyqr_user_roles") || "{}");
+                      if (userEmail) {
+                        rolesMap[userEmail] = "pro";
+                        localStorage.setItem("happyqr_user_roles", JSON.stringify(rolesMap));
+                        showToast("Upgraded to PRO! Poster limits updated.", "success");
+                        setTimeout(() => window.location.reload(), 500);
+                      }
+                    } catch {
+                      showToast("Upgrade failed.", "error");
+                    }
+                  }}
+                  style={{ height: "24px", fontSize: "11px", padding: "0 8px", background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#fff", border: "none" }}
+                >
+                  Upgrade to PRO
+                </button>
+              )}
             </div>
           )}
 

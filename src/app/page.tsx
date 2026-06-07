@@ -54,6 +54,15 @@ export default function Home() {
   const handleLoginSuccess = (email: string) => {
     setUserEmail(email);
     localStorage.setItem("happyqr_user", email);
+    try {
+      const registered = JSON.parse(localStorage.getItem("happyqr_registered_users") || "[]");
+      if (!registered.includes(email)) {
+        registered.push(email);
+        localStorage.setItem("happyqr_registered_users", JSON.stringify(registered));
+      }
+    } catch (e) {
+      /* ignore */
+    }
     showToast(`Logged in as ${email}`, "success");
   };
 
@@ -89,6 +98,8 @@ export default function Home() {
           <BulkGenerator
             onGenerate={(entries) => entries.forEach(addToHistory)}
             showToast={showToast}
+            userEmail={userEmail}
+            onLoginClick={() => setIsAuthOpen(true)}
           />
         )}
         {activeTab === "poster" && (

@@ -24,6 +24,7 @@
   --text-secondary: #a1a1aa;
   --text-tertiary: #71717a;
   --text-placeholder: #52525b;
+  --text-muted: #a1a1aa;
 
   --accent-primary: #f3f4f6;
   --accent-blue: #8b5cf6;
@@ -73,6 +74,7 @@
   --text-secondary: #475569;
   --text-tertiary: #64748b;
   --text-placeholder: #94a3b8;
+  --text-muted: #64748b;
 
   --accent-primary: #0f172a;
   --accent-blue: #7c3aed;
@@ -2663,6 +2665,11 @@ html, body {
   display: flex;
   flex-direction: column;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.qr-float-panel.is-dragging {
+  transition: none !important;
 }
 
 .qr-float-panel.scale-sm {
@@ -2724,6 +2731,62 @@ html, body {
   box-shadow: var(--shadow-sm);
 }
 
+.qr-float-resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  cursor: nwse-resize;
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 4px;
+}
+
+.qr-float-resize-handle::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-left: 2px solid var(--text-secondary);
+  border-top: 2px solid var(--text-secondary);
+  border-top-left-radius: 2px;
+  opacity: 0.6;
+  transition: opacity 0.2s, border-color 0.2s;
+}
+
+.qr-float-resize-handle:hover::after {
+  opacity: 1;
+  border-color: var(--accent-blue);
+}
+
+/* Badges for User Roles */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 6px;
+}
+
+.role-badge-free {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.role-badge-pro {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+  border: none;
+}
+
 .qr-float-close {
   background: transparent;
   border: none;
@@ -2740,6 +2803,7 @@ html, body {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
 }
+
 
 
 
