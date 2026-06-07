@@ -281,6 +281,11 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
   // Accordion state
   const [openSection, setOpenSection] = useState<"content" | "shapes" | "colors" | "logo" | "frame" | null>("content");
 
+  // Mobile floating preview state
+  const [isMobileView, setIsMobileView] = useState(false);
+  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(true);
+  const [previewScale, setPreviewScale] = useState<"sm" | "md" | "lg">("sm");
+
   const toggleSection = (section: "content" | "shapes" | "colors" | "logo" | "frame") => {
     setOpenSection(openSection === section ? null : section);
   };
@@ -291,6 +296,14 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Mobile view detection for floating preview
+  useEffect(() => {
+    const check = () => setIsMobileView(window.innerWidth < 900);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   // Load limits from localStorage
   const getAnonGenCount = (): number => {
@@ -1948,9 +1961,117 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
     : "Frame Active";
 
   return (
-    <div className="generator-grid fade-in">
+    <>
+      {/* ── Mobile Floating QR Preview ── */}
+      {isMobileView && (
+        <div className={`qr-float-preview ${mobilePreviewOpen ? "qr-float-preview--open" : ""}`}>
+          {/* Always hidden canvas for generating — stays in DOM */}
+          <canvas
+            ref={canvasRef}
+            style={{ display: "none" }}
+            aria-hidden="true"
+          />
+
+          {/* Collapsed: small floating button */}
+          {!mobilePreviewOpen && (
+            <button
+              className="qr-float-thumb"
+              onClick={() => setMobilePreviewOpen(true)}
+              title="View QR Preview"
+              aria-label="Open QR Preview"
+            >
+              {qrDataUrl ? (
+                <img src={qrDataUrl} alt="QR Preview" className="qr-float-img" />
+              ) : (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6">
+                  <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1"/>
+                  <rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/>
+                  <rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/>
+                </svg>
+              )}
+              {isGenerating && <div className="qr-float-spinner" />}
+            </button>
+          )}
+
+          {/* Expanded: full preview panel */}
+          {mobilePreviewOpen && (
+            <div className={`qr-float-panel scale-${previewScale}`}>
+              <div className="qr-float-panel-header">
+                <span className="qr-float-panel-title">QR Preview</span>
+                <div className="qr-float-size-control">
+                  <button
+                    type="button"
+                    className={`size-btn ${previewScale === "sm" ? "active" : ""}`}
+                    onClick={() => setPreviewScale("sm")}
+                    title="Small Size"
+                  >
+                    S
+                  </button>
+                  <button
+                    type="button"
+                    className={`size-btn ${previewScale === "md" ? "active" : ""}`}
+                    onClick={() => setPreviewScale("md")}
+                    title="Medium Size"
+                  >
+                    M
+                  </button>
+                  <button
+                    type="button"
+                    className={`size-btn ${previewScale === "lg" ? "active" : ""}`}
+                    onClick={() => setPreviewScale("lg")}
+                    title="Large Size"
+                  >
+                    L
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="qr-float-close"
+                  onClick={() => setMobilePreviewOpen(false)}
+                  title="Minimize Preview"
+                  aria-label="Minimize preview"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+              </div>
+              <div style={{ padding: "12px" }}>
+                <div className={`qr-canvas-wrapper ${customStyle.isTransparent ? "checkerboard-bg" : ""}`} style={{ minHeight: "auto", aspectRatio: "1/1", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                  {isGenerating && (
+                    <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)" }}>
+                      <div className="spinner" />
+                    </div>
+                  )}
+                  {qrDataUrl ? (
+                    <img src={qrDataUrl} alt="QR Code" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "var(--radius-sm)" }} />
+                  ) : (
+                    <div className="qr-empty-state">
+                      <span className="qr-empty-text">Type to generate QR</span>
+                    </div>
+                  )}
+                </div>
+                <div className="qr-actions" style={{ marginTop: 12, display: "flex", gap: 6 }}>
+                  <button className="btn btn-primary" style={{ flex: 1, padding: "6px 8px", fontSize: "11px", height: "32px" }} disabled={!qrDataUrl} onClick={handleDownloadPNG}>PNG</button>
+                  <button className="btn btn-secondary" style={{ flex: 1, padding: "6px 8px", fontSize: "11px", height: "32px" }} disabled={!text.trim()} onClick={handleDownloadSVG}>SVG</button>
+                  <button className="btn btn-ghost" style={{ padding: "6px 10px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center" }} disabled={!qrDataUrl} onClick={handleCopyPNG}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Main Generator Grid ── */}
+      <div className="generator-grid fade-in">
       {/* Left controls panel */}
       <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+
         
         {/* Limitation Notification if reached */}
         {isLimitReached && (
@@ -2163,7 +2284,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                 {/* 6. VCARD CONTACT */}
                 {contentType === "vcard" && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div className="responsive-grid-2" style={{ gap: 10 }}>
                       <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="form-label" htmlFor="first-name">First Name</label>
                         <input
@@ -2185,7 +2306,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                         />
                       </div>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div className="responsive-grid-2" style={{ gap: 10 }}>
                       <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="form-label" htmlFor="contact-phone">Phone</label>
                         <input
@@ -2207,7 +2328,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                         />
                       </div>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div className="responsive-grid-2" style={{ gap: 10 }}>
                       <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="form-label" htmlFor="contact-org">Organization</label>
                         <input
@@ -2483,7 +2604,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
               ) : (
                 /* Gradient Color Inputs */
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                  <div className="responsive-grid-2">
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label">Gradient Start</label>
                       <div className="color-picker-row">
@@ -2522,7 +2643,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                     </div>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                  <div className="responsive-grid-2">
                     <CustomDropdown
                       label="Gradient Type"
                       value={customStyle.gradientType}
@@ -2868,7 +2989,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     
                     {/* Font & Color selection */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                    <div className="responsive-grid-2">
                       <CustomDropdown
                         label="Label Text Font"
                         value={customStyle.labelFont}
@@ -2895,7 +3016,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                       />
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                    <div className="responsive-grid-2">
                       {/* Hide positions if Custom Frame is wrapping the labels */}
                       {customStyle.frameStyle === "none" ? (
                         <>
@@ -2950,7 +3071,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
               </div>
 
               {/* Advanced settings row (EC level and resolution size) */}
-              <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+              <div className="responsive-grid-2" style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: 14 }}>
                 <CustomDropdown
                   label="Download Quality Size"
                   value={customStyle.downloadSize}
@@ -2985,99 +3106,102 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
       </div>
 
       {/* Right side canvas display panel */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <div className="card">
-          <div className="card-header">
-            <div>
-              <div className="card-title">Premium Styled QR Studio</div>
-              <div className="card-subtitle">Aspect ratio 1:1 preview canvas</div>
+      {!isMobileView && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div className="card">
+            <div className="card-header">
+              <div>
+                <div className="card-title">Premium Styled QR Studio</div>
+                <div className="card-subtitle">Aspect ratio 1:1 preview canvas</div>
+              </div>
             </div>
-          </div>
-          <div className="card-body">
-            <div className="qr-preview-container">
-              {/* Preview Wrapper Container */}
-              <div className={`qr-canvas-wrapper ${customStyle.isTransparent ? "checkerboard-bg" : ""}`}>
-                {isGenerating && (
-                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>
-                    <div className="spinner" />
-                  </div>
-                )}
-                <canvas
-                  ref={canvasRef}
-                  style={{
-                    display: qrDataUrl ? "block" : "none",
-                    borderRadius: "var(--radius-sm)",
-                    maxWidth: "100%",
-                    maxHeight: "100%",
-                    objectFit: "contain",
-                  }}
-                />
-              </div>
+            <div className="card-body">
+              <div className="qr-preview-container">
+                {/* Preview Wrapper Container */}
+                <div className={`qr-canvas-wrapper ${customStyle.isTransparent ? "checkerboard-bg" : ""}`}>
+                  {isGenerating && (
+                    <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>
+                      <div className="spinner" />
+                    </div>
+                  )}
+                  <canvas
+                    ref={canvasRef}
+                    style={{
+                      display: qrDataUrl ? "block" : "none",
+                      borderRadius: "var(--radius-sm)",
+                      maxWidth: "100%",
+                      maxHeight: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
 
-              {/* Action buttons */}
-              <div className="qr-actions">
-                <button
-                  id="btn-qr-dl-png"
-                  className="btn btn-primary"
-                  style={{ flex: 1 }}
-                  disabled={!qrDataUrl}
-                  onClick={handleDownloadPNG}
-                >
-                  Download PNG
-                </button>
-                <button
-                  id="btn-qr-dl-svg"
-                  className="btn btn-secondary"
-                  style={{ flex: 1 }}
-                  disabled={!text.trim()}
-                  onClick={handleDownloadSVG}
-                >
-                  Download SVG
-                </button>
-                <button
-                  id="btn-qr-copy"
-                  className="btn btn-ghost"
-                  disabled={!qrDataUrl}
-                  onClick={handleCopyPNG}
-                  data-tooltip="Copy Image"
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Content preview & copy text */}
-              {text.trim() && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div className="copy-text-row" style={{ flex: 1 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, opacity: 0.5 }}>
-                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                    </svg>
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
-                      {text.length > 60 ? text.slice(0, 60) + "…" : text}
-                    </span>
-                  </div>
+                {/* Action buttons */}
+                <div className="qr-actions">
                   <button
-                    id="btn-copy-text"
-                    className="btn btn-ghost btn-sm"
-                    onClick={handleCopyText}
-                    data-tooltip="Copy Content"
-                    style={{ flexShrink: 0, height: 36 }}
+                    id="btn-qr-dl-png"
+                    className="btn btn-primary"
+                    style={{ flex: 1 }}
+                    disabled={!qrDataUrl}
+                    onClick={handleDownloadPNG}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    Download PNG
+                  </button>
+                  <button
+                    id="btn-qr-dl-svg"
+                    className="btn btn-secondary"
+                    style={{ flex: 1 }}
+                    disabled={!text.trim()}
+                    onClick={handleDownloadSVG}
+                  >
+                    Download SVG
+                  </button>
+                  <button
+                    id="btn-qr-copy"
+                    className="btn btn-ghost"
+                    disabled={!qrDataUrl}
+                    onClick={handleCopyPNG}
+                    data-tooltip="Copy Image"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                     </svg>
                   </button>
                 </div>
-              )}
+
+                {/* Content preview & copy text */}
+                {text.trim() && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div className="copy-text-row" style={{ flex: 1 }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, opacity: 0.5 }}>
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                      </svg>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                        {text.length > 60 ? text.slice(0, 60) + "…" : text}
+                      </span>
+                    </div>
+                    <button
+                      id="btn-copy-text"
+                      className="btn btn-ghost btn-sm"
+                      onClick={handleCopyText}
+                      data-tooltip="Copy Content"
+                      style={{ flexShrink: 0, height: 36 }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
+    </>
   );
 }

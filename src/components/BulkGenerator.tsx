@@ -122,7 +122,8 @@ export default function BulkGenerator({ onGenerate, showToast }: BulkGeneratorPr
 
   return (
     <div className="fade-in">
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 24, alignItems: "start" }}>
+      <div className="bulk-generator-grid">
+
         {/* Left: Input */}
         <div className="card">
           <div className="card-header">

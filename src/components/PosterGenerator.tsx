@@ -386,7 +386,8 @@ export default function PosterGenerator({ showToast, userEmail, onLoginClick }: 
           {/* Template presets selection */}
           <div className="form-group">
             <label className="form-label">Select Template Theme</label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
+            <div className="qr-style-grid">
+
               {TEMPLATE_PRESETS.map((tpl) => (
                 <button
                   key={tpl.id}

@@ -88,7 +88,7 @@ export default function HistoryPanel({
         ) : (
           <div className="history-list">
             {history.map((entry) => (
-              <div key={entry.id} className="history-item">
+              <div key={entry.id} className="history-item" style={{ flexWrap: "wrap" }}>
                 <div className="history-qr-thumb">
                   {entry.dataUrl ? (
                     <img src={entry.dataUrl} alt="QR Thumbnail" />
@@ -103,7 +103,7 @@ export default function HistoryPanel({
                   )}
                 </div>
 
-                <div className="history-meta">
+                <div className="history-meta" style={{ flex: 1 }}>
                   <div className="history-text">
                     {entry.label ? `${entry.label} (${entry.content})` : entry.content}
                   </div>
@@ -116,7 +116,7 @@ export default function HistoryPanel({
                   </div>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                   <span
                     className={`history-type-badge ${
                       entry.type === "url"
