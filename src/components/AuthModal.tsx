@@ -43,9 +43,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
       if (typeof window !== "undefined" && (window as any).google) {
         clearInterval(intervalId);
         try {
-          const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+          const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "746428600242-7pjgi48u2hcnf23p9qpa1li9rchouf00.apps.googleusercontent.com";
           if (!clientId) {
-            console.error("Google Client ID is not set. Please set NEXT_PUBLIC_GOOGLE_CLIENT_ID in .env.local");
+            console.error("Google Client ID is not set.");
             return;
           }
 
