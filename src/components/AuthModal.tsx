@@ -67,7 +67,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
               size: "large",
               width: "100%",
               text: "continue_with",
-              shape: "rectangular",
+              shape: "pill",
             });
           }
         } catch (err) {
