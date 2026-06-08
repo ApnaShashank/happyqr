@@ -231,6 +231,7 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
         <link rel="icon" href="/logo.png" type="image/png" />
         <link rel="shortcut icon" href="/logo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/logo.png" />
