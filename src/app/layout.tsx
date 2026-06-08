@@ -70,6 +70,7 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  metadataBase: new URL("https://happyqr.vercel.app"),
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -80,11 +81,8 @@ export const metadata: Metadata = {
       "Create stunning, custom QR codes with logo, colors, and shapes. Free online tool — no signup needed. Download in PNG or SVG. Bulk generate 100 QR codes instantly.",
     images: [
       {
-        url: "https://happyqr.vercel.app/og-image.png",
-        width: 1200,
-        height: 630,
+        url: "/logo.png",
         alt: "HappyQR — Free Custom QR Code Generator",
-        type: "image/png",
       },
     ],
   },
@@ -95,7 +93,7 @@ export const metadata: Metadata = {
     title: "HappyQR — Free QR Code Generator with Logo & Custom Design",
     description:
       "Create stunning custom QR codes with logo, colors & shapes. Bulk generate 100 QR codes. Download PNG or SVG free.",
-    images: ["https://happyqr.vercel.app/og-image.png"],
+    images: ["/logo.png"],
   },
   alternates: {
     canonical: "https://happyqr.vercel.app",
@@ -166,7 +164,7 @@ const jsonLd = {
         "No Watermark",
         "No Signup Required",
       ],
-      screenshot: "https://happyqr.vercel.app/og-image.png",
+      screenshot: "https://happyqr.vercel.app/logo.png",
       author: {
         "@type": "Organization",
         name: "HappyQR",

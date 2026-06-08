@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import QRCode from "qrcode";
@@ -81,7 +81,7 @@ interface CustomQRStyle {
   gradientDir: "horizontal" | "vertical" | "diagonal";
   isTransparent: boolean;
   bgImageOpacity: number;
-  frameStyle: "none" | "banner-bottom" | "banner-top" | "bubble-bottom" | "bubble-top" | "elegant-border" | "corners-only" | "phone-bezel" | "clipboard" | "shopping-bag" | "tag-pendant" | "circular-ring" | "dashed-border" | "double-border" | "book-cover" | "coffee-cup" | "envelope-mail" | "shield-badge" | "ticket-coupon" | "laptop-monitor" | "heart-love" | "star-sparkle" | "gift-box";
+  frameStyle: "none" | "banner-bottom" | "banner-top" | "bubble-bottom" | "bubble-top" | "elegant-border" | "corners-only" | "phone-bezel" | "clipboard" | "shopping-bag" | "tag-pendant" | "circular-ring" | "dashed-border" | "double-border" | "book-cover" | "coffee-cup" | "envelope-mail" | "shield-badge" | "ticket-coupon" | "laptop-monitor" | "heart-love" | "star-sparkle" | "gift-box" | "neon-glow" | "gradient-burst" | "polaroid" | "ornamental" | "sunburst" | "circuit-board" | "floral-wreath" | "retro-tv" | "paint-splash" | "trophy";
   frameColor: string;
   marginSize: number;
   downloadSize: 256 | 512 | 1024 | 2048;
@@ -860,6 +860,56 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         extraBottom = baseQRSize * 0.10;
         extraLeft = baseQRSize * 0.06;
         extraRight = baseQRSize * 0.06;
+      } else if (customStyle.frameStyle === "neon-glow") {
+        extraTop = baseQRSize * 0.06;
+        extraBottom = baseQRSize * 0.14;
+        extraLeft = baseQRSize * 0.06;
+        extraRight = baseQRSize * 0.06;
+      } else if (customStyle.frameStyle === "gradient-burst") {
+        extraTop = baseQRSize * 0.08;
+        extraBottom = baseQRSize * 0.14;
+        extraLeft = baseQRSize * 0.08;
+        extraRight = baseQRSize * 0.08;
+      } else if (customStyle.frameStyle === "polaroid") {
+        extraTop = baseQRSize * 0.06;
+        extraBottom = baseQRSize * 0.22;
+        extraLeft = baseQRSize * 0.06;
+        extraRight = baseQRSize * 0.06;
+      } else if (customStyle.frameStyle === "ornamental") {
+        extraTop = baseQRSize * 0.12;
+        extraBottom = baseQRSize * 0.14;
+        extraLeft = baseQRSize * 0.12;
+        extraRight = baseQRSize * 0.12;
+      } else if (customStyle.frameStyle === "sunburst") {
+        extraTop = baseQRSize * 0.12;
+        extraBottom = baseQRSize * 0.16;
+        extraLeft = baseQRSize * 0.12;
+        extraRight = baseQRSize * 0.12;
+      } else if (customStyle.frameStyle === "circuit-board") {
+        extraTop = baseQRSize * 0.08;
+        extraBottom = baseQRSize * 0.14;
+        extraLeft = baseQRSize * 0.08;
+        extraRight = baseQRSize * 0.08;
+      } else if (customStyle.frameStyle === "floral-wreath") {
+        extraTop = baseQRSize * 0.12;
+        extraBottom = baseQRSize * 0.16;
+        extraLeft = baseQRSize * 0.12;
+        extraRight = baseQRSize * 0.12;
+      } else if (customStyle.frameStyle === "retro-tv") {
+        extraTop = baseQRSize * 0.12;
+        extraBottom = baseQRSize * 0.18;
+        extraLeft = baseQRSize * 0.10;
+        extraRight = baseQRSize * 0.10;
+      } else if (customStyle.frameStyle === "paint-splash") {
+        extraTop = baseQRSize * 0.10;
+        extraBottom = baseQRSize * 0.14;
+        extraLeft = baseQRSize * 0.10;
+        extraRight = baseQRSize * 0.10;
+      } else if (customStyle.frameStyle === "trophy") {
+        extraTop = baseQRSize * 0.16;
+        extraBottom = baseQRSize * 0.14;
+        extraLeft = baseQRSize * 0.08;
+        extraRight = baseQRSize * 0.08;
       }
 
       let textSpacing = 0;
@@ -1615,6 +1665,518 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 - 5);
+
+        } else if (customStyle.frameStyle === "neon-glow") {
+          // Multi-layer neon glow border
+          const neonColor = customStyle.frameColor;
+          const glowLayers = [
+            { blur: 32, alpha: 0.15, width: 24 },
+            { blur: 16, alpha: 0.3, width: 16 },
+            { blur: 8, alpha: 0.6, width: 8 },
+            { blur: 0, alpha: 1.0, width: 4 },
+          ];
+          for (const layer of glowLayers) {
+            ctx.save();
+            ctx.shadowBlur = layer.blur;
+            ctx.shadowColor = neonColor;
+            ctx.globalAlpha = layer.alpha;
+            ctx.strokeStyle = neonColor;
+            ctx.lineWidth = layer.width;
+            ctx.beginPath();
+            ctx.roundRect(layer.width / 2 + 4, layer.width / 2 + 4, canvasW - layer.width - 8, canvasH - layer.width - 8, 18);
+            ctx.stroke();
+            ctx.restore();
+          }
+          // Solid white inner shine
+          ctx.save();
+          ctx.strokeStyle = "#ffffff";
+          ctx.globalAlpha = 0.7;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.roundRect(12, 12, canvasW - 24, canvasH - 24, 14);
+          ctx.stroke();
+          ctx.restore();
+          // Bottom label banner
+          const neonBannerGrad = ctx.createLinearGradient(0, canvasH - extraBottom, canvasW, canvasH);
+          neonBannerGrad.addColorStop(0, customStyle.frameColor);
+          neonBannerGrad.addColorStop(0.5, "#ffffff22");
+          neonBannerGrad.addColorStop(1, customStyle.frameColor);
+          ctx.save();
+          ctx.fillStyle = neonBannerGrad;
+          ctx.globalAlpha = 0.9;
+          ctx.beginPath();
+          ctx.roundRect(12, canvasH - extraBottom + 4, canvasW - 24, extraBottom - 10, [0, 0, 12, 12]);
+          ctx.fill();
+          ctx.restore();
+          ctx.save();
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = "#ffffff";
+          ctx.fillStyle = "#ffffff";
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 + 4);
+          ctx.restore();
+
+        } else if (customStyle.frameStyle === "gradient-burst") {
+          // Radial burst gradient background for frame area
+          const burstGrad = ctx.createRadialGradient(canvasW / 2, canvasH / 2, baseQRSize * 0.3, canvasW / 2, canvasH / 2, canvasW * 0.8);
+          burstGrad.addColorStop(0, customStyle.frameColor + "00");
+          burstGrad.addColorStop(0.6, customStyle.frameColor + "55");
+          burstGrad.addColorStop(1, customStyle.frameColor + "cc");
+          ctx.fillStyle = burstGrad;
+          ctx.fillRect(0, 0, canvasW, canvasH);
+          // Gradient border ring
+          const ringGrad = ctx.createLinearGradient(0, 0, canvasW, canvasH);
+          ringGrad.addColorStop(0, "#ff6b6b");
+          ringGrad.addColorStop(0.33, customStyle.frameColor);
+          ringGrad.addColorStop(0.66, "#a855f7");
+          ringGrad.addColorStop(1, "#2563eb");
+          ctx.strokeStyle = ringGrad;
+          ctx.lineWidth = 10;
+          ctx.beginPath();
+          ctx.roundRect(8, 8, canvasW - 16, canvasH - 16, 20);
+          ctx.stroke();
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = "#ffffff55";
+          ctx.beginPath();
+          ctx.roundRect(16, 16, canvasW - 32, canvasH - 32, 14);
+          ctx.stroke();
+          // Label banner with gradient
+          const labelGrad2 = ctx.createLinearGradient(0, canvasH - extraBottom, canvasW, canvasH);
+          labelGrad2.addColorStop(0, "#7c3aed");
+          labelGrad2.addColorStop(1, "#2563eb");
+          ctx.fillStyle = labelGrad2;
+          ctx.beginPath();
+          ctx.roundRect(8, canvasH - extraBottom + 2, canvasW - 16, extraBottom - 10, [0, 0, 14, 14]);
+          ctx.fill();
+          ctx.fillStyle = "#ffffff";
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 + 2);
+
+        } else if (customStyle.frameStyle === "polaroid") {
+          // Polaroid white frame
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.roundRect(6, 6, canvasW - 12, canvasH - 12, 8);
+          ctx.fill();
+          // Subtle gray shadow inset
+          ctx.strokeStyle = "#e2e8f0";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(6, 6, canvasW - 12, canvasH - 12);
+          // Tape strip top
+          const tapeGrad = ctx.createLinearGradient(canvasW / 2 - 50, 0, canvasW / 2 + 50, 0);
+          tapeGrad.addColorStop(0, customStyle.frameColor + "99");
+          tapeGrad.addColorStop(0.5, customStyle.frameColor + "cc");
+          tapeGrad.addColorStop(1, customStyle.frameColor + "99");
+          ctx.fillStyle = tapeGrad;
+          ctx.save();
+          ctx.globalAlpha = 0.7;
+          ctx.beginPath();
+          ctx.roundRect(canvasW / 2 - 48, 0, 96, 20, 3);
+          ctx.fill();
+          ctx.restore();
+          // Large bottom photo caption area with colored stripe
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.globalAlpha = 0.12;
+          ctx.fillRect(6, canvasH - extraBottom + 4, canvasW - 12, extraBottom - 10);
+          ctx.globalAlpha = 1;
+          // Handwriting-style label
+          ctx.fillStyle = customStyle.frameColor;
+          ctx.font = `italic bold ${customStyle.labelFontSize}px Georgia, serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 + 4);
+          // Bottom signature line
+          ctx.strokeStyle = customStyle.frameColor;
+          ctx.globalAlpha = 0.3;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(canvasW * 0.2, canvasH - 16);
+          ctx.lineTo(canvasW * 0.8, canvasH - 16);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+
+        } else if (customStyle.frameStyle === "ornamental") {
+          // Rich ornamental frame with decorative corners
+          const orn = customStyle.frameColor;
+          // Outer thick border
+          ctx.strokeStyle = orn;
+          ctx.lineWidth = 12;
+          ctx.beginPath();
+          ctx.roundRect(8, 8, canvasW - 16, canvasH - 16, 6);
+          ctx.stroke();
+          // Inner thin border
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = orn + "99";
+          ctx.beginPath();
+          ctx.roundRect(20, 20, canvasW - 40, canvasH - 40, 4);
+          ctx.stroke();
+          // Decorative corner rosettes
+          const drawRosette = (cx: number, cy: number, r: number) => {
+            for (let i = 0; i < 8; i++) {
+              const angle = (i * Math.PI * 2) / 8;
+              ctx.beginPath();
+              ctx.arc(cx + Math.cos(angle) * r * 0.5, cy + Math.sin(angle) * r * 0.5, r * 0.35, 0, Math.PI * 2);
+              ctx.fillStyle = orn;
+              ctx.fill();
+            }
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * 0.4, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * 0.2, 0, Math.PI * 2);
+            ctx.fillStyle = orn;
+            ctx.fill();
+          };
+          const rosetteR = 14;
+          drawRosette(rosetteR + 8, rosetteR + 8, rosetteR);
+          drawRosette(canvasW - rosetteR - 8, rosetteR + 8, rosetteR);
+          drawRosette(rosetteR + 8, canvasH - rosetteR - 8, rosetteR);
+          drawRosette(canvasW - rosetteR - 8, canvasH - rosetteR - 8, rosetteR);
+          // Decorative side dots
+          for (let i = 0; i < 5; i++) {
+            const yy = canvasH * (0.2 + i * 0.15);
+            ctx.beginPath(); ctx.arc(14, yy, 4, 0, Math.PI * 2); ctx.fillStyle = orn; ctx.fill();
+            ctx.beginPath(); ctx.arc(canvasW - 14, yy, 4, 0, Math.PI * 2); ctx.fill();
+          }
+          // Label banner
+          const ornGrad = ctx.createLinearGradient(0, canvasH - extraBottom, canvasW, canvasH);
+          ornGrad.addColorStop(0, orn);
+          ornGrad.addColorStop(0.5, orn + "cc");
+          ornGrad.addColorStop(1, orn);
+          ctx.fillStyle = ornGrad;
+          ctx.beginPath();
+          ctx.roundRect(20, canvasH - extraBottom + 4, canvasW - 40, extraBottom - 14, [0, 0, 4, 4]);
+          ctx.fill();
+          ctx.fillStyle = "#ffffff";
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 + 4);
+
+        } else if (customStyle.frameStyle === "sunburst") {
+          // Sunburst rays behind QR
+          const sunCX = canvasW / 2;
+          const sunCY = canvasH / 2 - extraBottom / 4;
+          const rayCount = 18;
+          const outerRay = Math.max(canvasW, canvasH) * 0.72;
+          const innerRay = Math.max(canvasW, canvasH) * 0.35;
+          ctx.save();
+          for (let i = 0; i < rayCount; i++) {
+            const angle1 = (i / rayCount) * Math.PI * 2;
+            const angle2 = ((i + 0.5) / rayCount) * Math.PI * 2;
+            const angle3 = ((i + 1) / rayCount) * Math.PI * 2;
+            const rayGrad = ctx.createLinearGradient(sunCX, sunCY, sunCX + Math.cos(angle2) * outerRay, sunCY + Math.sin(angle2) * outerRay);
+            rayGrad.addColorStop(0, customStyle.frameColor + "cc");
+            rayGrad.addColorStop(1, customStyle.frameColor + "00");
+            ctx.fillStyle = rayGrad;
+            ctx.beginPath();
+            ctx.moveTo(sunCX + Math.cos(angle1) * innerRay, sunCY + Math.sin(angle1) * innerRay);
+            ctx.lineTo(sunCX + Math.cos(angle2) * outerRay, sunCY + Math.sin(angle2) * outerRay);
+            ctx.lineTo(sunCX + Math.cos(angle3) * innerRay, sunCY + Math.sin(angle3) * innerRay);
+            ctx.closePath();
+            ctx.fill();
+          }
+          ctx.restore();
+          // Golden ring
+          const sunRingGrad = ctx.createLinearGradient(0, 0, canvasW, canvasH);
+          sunRingGrad.addColorStop(0, "#f59e0b");
+          sunRingGrad.addColorStop(0.5, customStyle.frameColor);
+          sunRingGrad.addColorStop(1, "#fbbf24");
+          ctx.strokeStyle = sunRingGrad;
+          ctx.lineWidth = 10;
+          ctx.beginPath();
+          ctx.roundRect(8, 8, canvasW - 16, canvasH - 16, 16);
+          ctx.stroke();
+          ctx.strokeStyle = "#ffffff55";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.roundRect(18, 18, canvasW - 36, canvasH - 36, 10);
+          ctx.stroke();
+          // Label
+          const sunLabelGrad = ctx.createLinearGradient(0, canvasH - extraBottom, canvasW, canvasH);
+          sunLabelGrad.addColorStop(0, "#f59e0b");
+          sunLabelGrad.addColorStop(1, "#d97706");
+          ctx.fillStyle = sunLabelGrad;
+          ctx.beginPath();
+          ctx.roundRect(10, canvasH - extraBottom + 2, canvasW - 20, extraBottom - 12, [0, 0, 10, 10]);
+          ctx.fill();
+          ctx.fillStyle = "#ffffff";
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 + 2);
+
+        } else if (customStyle.frameStyle === "circuit-board") {
+          // Circuit board tech frame
+          const cColor = customStyle.frameColor;
+          // Base border
+          ctx.strokeStyle = cColor;
+          ctx.lineWidth = 8;
+          ctx.beginPath();
+          ctx.roundRect(8, 8, canvasW - 16, canvasH - 16, 4);
+          ctx.stroke();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = cColor + "77";
+          ctx.beginPath();
+          ctx.roundRect(16, 16, canvasW - 32, canvasH - 32, 2);
+          ctx.stroke();
+          // Circuit traces - horizontal/vertical lines
+          const traces = [
+            { x1: 8, y1: 40, x2: 40, y2: 40 },
+            { x1: 8, y1: 70, x2: 30, y2: 70 },
+            { x1: canvasW - 8, y1: 40, x2: canvasW - 40, y2: 40 },
+            { x1: canvasW - 8, y1: 70, x2: canvasW - 30, y2: 70 },
+            { x1: 40, y1: 8, x2: 40, y2: 40 },
+            { x1: 70, y1: 8, x2: 70, y2: 30 },
+            { x1: canvasW - 40, y1: 8, x2: canvasW - 40, y2: 40 },
+            { x1: canvasW - 70, y1: 8, x2: canvasW - 70, y2: 30 },
+            { x1: 8, y1: canvasH - extraBottom - 20, x2: 40, y2: canvasH - extraBottom - 20 },
+            { x1: canvasW - 8, y1: canvasH - extraBottom - 20, x2: canvasW - 40, y2: canvasH - extraBottom - 20 },
+          ];
+          ctx.strokeStyle = cColor;
+          ctx.lineWidth = 3;
+          traces.forEach(tr => {
+            ctx.beginPath();
+            ctx.moveTo(tr.x1, tr.y1);
+            ctx.lineTo(tr.x2, tr.y2);
+            ctx.stroke();
+          });
+          // Solder dots at trace ends
+          const dots = [[40,40],[30,70],[canvasW-40,40],[canvasW-30,70],[40,8],[70,30],[canvasW-40,8],[canvasW-70,30]];
+          ctx.fillStyle = cColor;
+          dots.forEach(d => {
+            ctx.beginPath(); ctx.arc(d[0], d[1], 5, 0, Math.PI * 2); ctx.fill();
+          });
+          // Label PCB style
+          ctx.fillStyle = cColor;
+          ctx.beginPath();
+          ctx.roundRect(10, canvasH - extraBottom + 2, canvasW - 20, extraBottom - 12, 2);
+          ctx.fill();
+          ctx.fillStyle = "#00ff88";
+          ctx.font = `bold ${customStyle.labelFontSize}px monospace`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 + 2);
+
+        } else if (customStyle.frameStyle === "floral-wreath") {
+          // Floral wreath frame
+          const flColor = customStyle.frameColor;
+          const petalColors = ["#f43f5e", "#f59e0b", "#10b981", "#8b5cf6", "#3b82f6"];
+          const flCX = canvasW / 2;
+          const flCY = canvasH / 2 - extraBottom / 4;
+          const wreathR = Math.min(canvasW, canvasH) * 0.5 - 12;
+          // Draw petals/flowers around the ring
+          const flowerCount = 12;
+          for (let i = 0; i < flowerCount; i++) {
+            const angle = (i / flowerCount) * Math.PI * 2;
+            const fx = flCX + Math.cos(angle) * wreathR;
+            const fy = flCY + Math.sin(angle) * wreathR;
+            const petalColor = petalColors[i % petalColors.length];
+            // Draw 5-petal flower
+            for (let p = 0; p < 5; p++) {
+              const pa = (p / 5) * Math.PI * 2;
+              ctx.beginPath();
+              ctx.arc(fx + Math.cos(pa) * 8, fy + Math.sin(pa) * 8, 7, 0, Math.PI * 2);
+              ctx.fillStyle = petalColor + "cc";
+              ctx.fill();
+            }
+            ctx.beginPath();
+            ctx.arc(fx, fy, 5, 0, Math.PI * 2);
+            ctx.fillStyle = "#fbbf24";
+            ctx.fill();
+          }
+          // Wreath ring
+          ctx.strokeStyle = "#16a34a";
+          ctx.lineWidth = 4;
+          ctx.setLineDash([8, 6]);
+          ctx.beginPath();
+          ctx.arc(flCX, flCY, wreathR, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          // Label
+          const wreathLabelGrad = ctx.createLinearGradient(0, canvasH - extraBottom, canvasW, canvasH);
+          wreathLabelGrad.addColorStop(0, "#16a34a");
+          wreathLabelGrad.addColorStop(1, "#15803d");
+          ctx.fillStyle = wreathLabelGrad;
+          ctx.beginPath();
+          ctx.roundRect(16, canvasH - extraBottom + 2, canvasW - 32, extraBottom - 12, [0, 0, 12, 12]);
+          ctx.fill();
+          ctx.fillStyle = "#ffffff";
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 + 2);
+
+        } else if (customStyle.frameStyle === "retro-tv") {
+          // Retro TV / arcade cabinet frame
+          const rtColor = customStyle.frameColor;
+          // TV outer shell (rounded trapezoid-ish)
+          ctx.fillStyle = rtColor;
+          ctx.beginPath();
+          ctx.roundRect(5, 5, canvasW - 10, canvasH - 10, [20, 20, 8, 8]);
+          ctx.fill();
+          // Screen inset (white)
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.roundRect(extraLeft - 4, extraTop - 4, baseQRSize + 8, baseQRSize + 8, 8);
+          ctx.fill();
+          // Scanlines on screen
+          ctx.save();
+          ctx.globalAlpha = 0.05;
+          ctx.fillStyle = "#000000";
+          for (let sl = extraTop - 4; sl < extraTop + baseQRSize + 4; sl += 4) {
+            ctx.fillRect(extraLeft - 4, sl, baseQRSize + 8, 2);
+          }
+          ctx.restore();
+          // Knob decorations
+          const knobY = canvasH - extraBottom / 2;
+          const knobPositions = [canvasW * 0.25, canvasW * 0.5, canvasW * 0.75];
+          knobPositions.forEach((kx) => {
+            ctx.beginPath();
+            ctx.arc(kx, knobY, 10, 0, Math.PI * 2);
+            ctx.fillStyle = "#1e293b";
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(kx, knobY, 5, 0, Math.PI * 2);
+            ctx.fillStyle = "#64748b";
+            ctx.fill();
+          });
+          // Brand label above knobs
+          ctx.fillStyle = "#ffffff";
+          ctx.globalAlpha = 0.9;
+          ctx.font = `bold ${Math.round(customStyle.labelFontSize * 0.85)}px monospace`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom + extraBottom * 0.25);
+          ctx.globalAlpha = 1;
+          // Antenna top
+          ctx.strokeStyle = "#1e293b";
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.moveTo(canvasW / 2 - 20, extraTop - 8);
+          ctx.lineTo(canvasW / 2, 8);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(canvasW / 2 + 20, extraTop - 8);
+          ctx.lineTo(canvasW / 2, 8);
+          ctx.stroke();
+
+        } else if (customStyle.frameStyle === "paint-splash") {
+          // Paint splash artistic border
+          const ps = customStyle.frameColor;
+          const splashColors = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6", ps];
+          // Draw paint blobs around the edges
+          const blobs = [
+            { x: 0, y: 0, r: 55 }, { x: canvasW, y: 0, r: 50 }, { x: 0, y: canvasH, r: 50 },
+            { x: canvasW, y: canvasH, r: 55 }, { x: canvasW / 2, y: 0, r: 40 },
+            { x: canvasW / 2, y: canvasH, r: 40 }, { x: 0, y: canvasH / 2, r: 40 },
+            { x: canvasW, y: canvasH / 2, r: 40 },
+          ];
+          blobs.forEach((blob, i) => {
+            const gc = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.r);
+            gc.addColorStop(0, splashColors[i % splashColors.length] + "dd");
+            gc.addColorStop(1, splashColors[i % splashColors.length] + "00");
+            ctx.fillStyle = gc;
+            ctx.beginPath();
+            ctx.arc(blob.x, blob.y, blob.r, 0, Math.PI * 2);
+            ctx.fill();
+          });
+          // White center safe zone
+          ctx.fillStyle = settings.bgColor;
+          ctx.beginPath();
+          ctx.roundRect(extraLeft - 8, extraTop - 8, baseQRSize + 16, baseQRSize + 16, 8);
+          ctx.fill();
+          // Label
+          ctx.fillStyle = ps;
+          ctx.beginPath();
+          ctx.roundRect(extraLeft, canvasH - extraBottom + 4, baseQRSize, extraBottom - 14, 8);
+          ctx.fill();
+          ctx.fillStyle = "#ffffff";
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 + 4);
+
+        } else if (customStyle.frameStyle === "trophy") {
+          // Trophy / award frame
+          const tColor = customStyle.frameColor;
+          const goldGrad = ctx.createLinearGradient(0, 0, canvasW, canvasH);
+          goldGrad.addColorStop(0, "#fbbf24");
+          goldGrad.addColorStop(0.3, tColor);
+          goldGrad.addColorStop(0.7, "#f59e0b");
+          goldGrad.addColorStop(1, "#fbbf24");
+          // Outer golden border
+          ctx.strokeStyle = goldGrad;
+          ctx.lineWidth = 14;
+          ctx.beginPath();
+          ctx.roundRect(8, 8, canvasW - 16, canvasH - 16, 12);
+          ctx.stroke();
+          // Double ring inner
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = "#fef3c7";
+          ctx.beginPath();
+          ctx.roundRect(20, 20, canvasW - 40, canvasH - 40, 8);
+          ctx.stroke();
+          // Star accents at top-left and top-right
+          const drawSmallStar = (cx: number, cy: number, sz: number, color: string) => {
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            for (let pt = 0; pt < 5; pt++) {
+              const a1 = ((pt * 2 - 0.5) / 5) * Math.PI * 2;
+              const a2 = ((pt * 2 + 0.5) / 5) * Math.PI * 2;
+              if (pt === 0) ctx.moveTo(cx + Math.cos(a1) * sz, cy + Math.sin(a1) * sz);
+              else ctx.lineTo(cx + Math.cos(a1) * sz, cy + Math.sin(a1) * sz);
+              ctx.lineTo(cx + Math.cos(a2) * (sz * 0.4), cy + Math.sin(a2) * (sz * 0.4));
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+          };
+          drawSmallStar(22, 22, 12, "#fbbf24");
+          drawSmallStar(canvasW - 22, 22, 12, "#fbbf24");
+          drawSmallStar(22, canvasH - extraBottom - 10, 10, "#fbbf24");
+          drawSmallStar(canvasW - 22, canvasH - extraBottom - 10, 10, "#fbbf24");
+          // Trophy icon at top center
+          const tx = canvasW / 2;
+          const ty = 18;
+          ctx.fillStyle = goldGrad;
+          ctx.beginPath();
+          ctx.roundRect(tx - 20, ty - 12, 40, 24, 4);
+          ctx.fill();
+          // Cup shape
+          ctx.fillStyle = "#fbbf24";
+          ctx.beginPath();
+          ctx.moveTo(tx - 12, ty - 6);
+          ctx.lineTo(tx + 12, ty - 6);
+          ctx.lineTo(tx + 10, ty + 6);
+          ctx.lineTo(tx - 10, ty + 6);
+          ctx.closePath();
+          ctx.fill();
+          // Handle arcs
+          ctx.strokeStyle = "#fbbf24";
+          ctx.lineWidth = 4;
+          ctx.beginPath(); ctx.arc(tx - 14, ty, 6, Math.PI * 0.3, Math.PI * 1.7); ctx.stroke();
+          ctx.beginPath(); ctx.arc(tx + 14, ty, 6, Math.PI * 1.3 - Math.PI, Math.PI * 0.7); ctx.stroke();
+          // Label banner with gold gradient
+          const tBanner = ctx.createLinearGradient(0, canvasH - extraBottom, canvasW, canvasH);
+          tBanner.addColorStop(0, "#f59e0b");
+          tBanner.addColorStop(0.5, tColor);
+          tBanner.addColorStop(1, "#f59e0b");
+          ctx.fillStyle = tBanner;
+          ctx.beginPath();
+          ctx.roundRect(20, canvasH - extraBottom + 4, canvasW - 40, extraBottom - 14, [0, 0, 8, 8]);
+          ctx.fill();
+          ctx.fillStyle = "#ffffff";
+          ctx.font = `bold ${customStyle.labelFontSize}px ${customStyle.labelFont}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(customStyle.labelText, canvasW / 2, canvasH - extraBottom / 2 + 4);
         }
       }
 
@@ -2046,17 +2608,178 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
     },
   ];
 
-  // ── Frame Picker Data ──
+
+  // -- Frame Picker Data --
   type FrameValue = CustomQRStyle["frameStyle"];
   const frameCategories: { category: string; frames: { value: FrameValue; label: string; preview: React.ReactNode }[] }[] = [
     {
-      category: "Minimalist",
+      category: "No Frame",
       frames: [
         {
-          value: "none", label: "No Frame",
+          value: "none", label: "Clean",
           preview: (
-            <svg width="50" height="50" viewBox="0 0 50 50" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.5">
-              <rect x="8" y="8" width="34" height="34" rx="2" strokeDasharray="3 3"/>
+            <svg width="50" height="50" viewBox="0 0 50 50" fill="none">
+              <rect x="8" y="8" width="34" height="34" rx="3" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="4 3"/>
+              <rect x="14" y="14" width="10" height="10" rx="1" fill="#94a3b8" opacity="0.4"/>
+              <rect x="26" y="14" width="10" height="10" rx="1" fill="#94a3b8" opacity="0.4"/>
+              <rect x="14" y="26" width="10" height="10" rx="1" fill="#94a3b8" opacity="0.4"/>
+              <rect x="27" y="27" width="4" height="4" fill="#94a3b8" opacity="0.4"/>
+              <rect x="32" y="27" width="4" height="4" fill="#94a3b8" opacity="0.4"/>
+              <rect x="27" y="32" width="4" height="4" fill="#94a3b8" opacity="0.4"/>
+              <rect x="32" y="32" width="4" height="4" fill="#94a3b8" opacity="0.4"/>
+            </svg>
+          ),
+        },
+      ],
+    },
+    {
+      category: "Premium Effects",
+      frames: [
+        {
+          value: "neon-glow", label: "Neon Glow",
+          preview: (
+            <svg width="52" height="60" viewBox="0 0 52 60" fill="none">
+              <rect x="3" y="3" width="46" height="46" rx="8" stroke="#a855f7" strokeWidth="5" opacity="0.35"/>
+              <rect x="3" y="3" width="46" height="46" rx="8" stroke="#a855f7" strokeWidth="3" opacity="0.65"/>
+              <rect x="3" y="3" width="46" height="46" rx="8" stroke="#e879f9" strokeWidth="1.5"/>
+              <rect x="6" y="6" width="40" height="40" rx="5" stroke="#ffffff" strokeWidth="0.5" opacity="0.5"/>
+              <rect x="4" y="50" width="44" height="8" rx="3" fill="#a855f7" opacity="0.9"/>
+              <line x1="13" y1="54" x2="38" y2="54" stroke="#e879f9" strokeWidth="1.5" opacity="0.8"/>
+            </svg>
+          ),
+        },
+        {
+          value: "gradient-burst", label: "Gradient Burst",
+          preview: (
+            <svg width="52" height="60" viewBox="0 0 52 60" fill="none">
+              <defs>
+                <radialGradient id="f-burst-bg" cx="50%" cy="45%" r="60%">
+                  <stop offset="0%" stopColor="#7c3aed" stopOpacity="0"/>
+                  <stop offset="60%" stopColor="#7c3aed" stopOpacity="0.3"/>
+                  <stop offset="100%" stopColor="#2563eb" stopOpacity="0.7"/>
+                </radialGradient>
+                <linearGradient id="f-burst-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#ff6b6b"/>
+                  <stop offset="33%" stopColor="#7c3aed"/>
+                  <stop offset="66%" stopColor="#a855f7"/>
+                  <stop offset="100%" stopColor="#2563eb"/>
+                </linearGradient>
+              </defs>
+              <rect width="52" height="52" rx="10" fill="url(#f-burst-bg)"/>
+              <rect x="2" y="2" width="48" height="48" rx="9" stroke="url(#f-burst-ring)" strokeWidth="3.5"/>
+              <rect x="7" y="7" width="38" height="38" rx="5" stroke="#ffffff" strokeWidth="0.8" opacity="0.4"/>
+              <rect x="3" y="52" width="46" height="6" rx="2" fill="url(#f-burst-ring)"/>
+            </svg>
+          ),
+        },
+        {
+          value: "sunburst", label: "Sunburst",
+          preview: (
+            <svg width="52" height="60" viewBox="0 0 52 60" fill="none">
+              <defs>
+                <linearGradient id="f-sun-label" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#f59e0b"/>
+                  <stop offset="100%" stopColor="#d97706"/>
+                </linearGradient>
+              </defs>
+              <line x1="26" y1="26" x2="52" y2="26" stroke="#fbbf24" strokeWidth="1.5" opacity="0.35"/>
+              <line x1="26" y1="26" x2="44" y2="8" stroke="#fbbf24" strokeWidth="1.5" opacity="0.35"/>
+              <line x1="26" y1="26" x2="26" y2="0" stroke="#fbbf24" strokeWidth="1.5" opacity="0.35"/>
+              <line x1="26" y1="26" x2="8" y2="8" stroke="#fbbf24" strokeWidth="1.5" opacity="0.35"/>
+              <line x1="26" y1="26" x2="0" y2="26" stroke="#fbbf24" strokeWidth="1.5" opacity="0.35"/>
+              <line x1="26" y1="26" x2="8" y2="44" stroke="#fbbf24" strokeWidth="1.5" opacity="0.35"/>
+              <line x1="26" y1="26" x2="26" y2="50" stroke="#fbbf24" strokeWidth="1.5" opacity="0.35"/>
+              <line x1="26" y1="26" x2="44" y2="44" stroke="#fbbf24" strokeWidth="1.5" opacity="0.35"/>
+              <rect x="8" y="8" width="36" height="36" rx="4" fill="white" fillOpacity="0.85"/>
+              <rect x="2" y="2" width="48" height="48" rx="7" stroke="#f59e0b" strokeWidth="3"/>
+              <rect x="6" y="6" width="40" height="40" rx="4" stroke="#fbbf24" strokeWidth="1" opacity="0.6"/>
+              <rect x="3" y="52" width="46" height="6" rx="2" fill="url(#f-sun-label)"/>
+            </svg>
+          ),
+        },
+        {
+          value: "paint-splash", label: "Paint Splash",
+          preview: (
+            <svg width="52" height="60" viewBox="0 0 52 60" fill="none">
+              <circle cx="0" cy="0" r="22" fill="#ef4444" opacity="0.6"/>
+              <circle cx="52" cy="0" r="22" fill="#f97316" opacity="0.6"/>
+              <circle cx="0" cy="52" r="22" fill="#22c55e" opacity="0.6"/>
+              <circle cx="52" cy="52" r="22" fill="#8b5cf6" opacity="0.6"/>
+              <circle cx="26" cy="0" r="16" fill="#eab308" opacity="0.5"/>
+              <circle cx="26" cy="52" r="16" fill="#3b82f6" opacity="0.5"/>
+              <rect x="10" y="8" width="32" height="36" rx="4" fill="white" opacity="0.9"/>
+              <rect x="5" y="50" width="42" height="8" rx="3" fill="#7c3aed"/>
+            </svg>
+          ),
+        },
+      ],
+    },
+    {
+      category: "Artistic",
+      frames: [
+        {
+          value: "polaroid", label: "Polaroid",
+          preview: (
+            <svg width="50" height="62" viewBox="0 0 50 62" fill="none">
+              <rect x="3" y="3" width="44" height="56" rx="3" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1.5"/>
+              <rect x="8" y="8" width="34" height="34" rx="2" fill="#ddd6fe" opacity="0.4"/>
+              <rect x="8" y="8" width="34" height="34" rx="2" fill="none" stroke="#e2e8f0" strokeWidth="0.5"/>
+              <rect x="18" y="0" width="14" height="8" rx="2" fill="#a78bfa" opacity="0.7"/>
+              <line x1="10" y1="56" x2="40" y2="56" stroke="#c4b5fd" strokeWidth="0.8" opacity="0.6"/>
+            </svg>
+          ),
+        },
+        {
+          value: "ornamental", label: "Ornamental",
+          preview: (
+            <svg width="52" height="60" viewBox="0 0 52 60" fill="none">
+              <defs>
+                <linearGradient id="f-orn-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#7c3aed"/>
+                  <stop offset="100%" stopColor="#2563eb"/>
+                </linearGradient>
+              </defs>
+              <rect x="3" y="3" width="46" height="46" rx="3" stroke="url(#f-orn-grad)" strokeWidth="4"/>
+              <rect x="9" y="9" width="34" height="34" rx="2" stroke="#7c3aed" strokeWidth="1" opacity="0.5"/>
+              <circle cx="3" cy="3" r="5" fill="#7c3aed"/>
+              <circle cx="49" cy="3" r="5" fill="#7c3aed"/>
+              <circle cx="3" cy="49" r="5" fill="#7c3aed"/>
+              <circle cx="49" cy="49" r="5" fill="#7c3aed"/>
+              <circle cx="3" cy="3" r="2.5" fill="white"/>
+              <circle cx="49" cy="3" r="2.5" fill="white"/>
+              <circle cx="3" cy="49" r="2.5" fill="white"/>
+              <circle cx="49" cy="49" r="2.5" fill="white"/>
+              <circle cx="3" cy="18" r="2" fill="#7c3aed"/>
+              <circle cx="3" cy="34" r="2" fill="#7c3aed"/>
+              <circle cx="49" cy="18" r="2" fill="#7c3aed"/>
+              <circle cx="49" cy="34" r="2" fill="#7c3aed"/>
+              <rect x="4" y="52" width="44" height="6" rx="2" fill="url(#f-orn-grad)"/>
+            </svg>
+          ),
+        },
+        {
+          value: "floral-wreath", label: "Floral Wreath",
+          preview: (
+            <svg width="52" height="60" viewBox="0 0 52 60" fill="none">
+              <circle cx="46" cy="25" r="6" fill="#f43f5e" opacity="0.8"/>
+              <circle cx="38" cy="8" r="6" fill="#f59e0b" opacity="0.8"/>
+              <circle cx="26" cy="4" r="6" fill="#10b981" opacity="0.8"/>
+              <circle cx="14" cy="8" r="6" fill="#8b5cf6" opacity="0.8"/>
+              <circle cx="6" cy="25" r="6" fill="#3b82f6" opacity="0.8"/>
+              <circle cx="14" cy="42" r="6" fill="#f43f5e" opacity="0.8"/>
+              <circle cx="26" cy="46" r="6" fill="#f59e0b" opacity="0.8"/>
+              <circle cx="38" cy="42" r="6" fill="#10b981" opacity="0.8"/>
+              <circle cx="46" cy="25" r="2.5" fill="#fbbf24"/>
+              <circle cx="38" cy="8" r="2.5" fill="#fbbf24"/>
+              <circle cx="26" cy="4" r="2.5" fill="#fbbf24"/>
+              <circle cx="14" cy="8" r="2.5" fill="#fbbf24"/>
+              <circle cx="6" cy="25" r="2.5" fill="#fbbf24"/>
+              <circle cx="14" cy="42" r="2.5" fill="#fbbf24"/>
+              <circle cx="26" cy="46" r="2.5" fill="#fbbf24"/>
+              <circle cx="38" cy="42" r="2.5" fill="#fbbf24"/>
+              <circle cx="26" cy="25" r="16" fill="white" opacity="0.9"/>
+              <circle cx="26" cy="25" r="16" stroke="#16a34a" strokeWidth="1.5" strokeDasharray="4 3" fill="none"/>
+              <rect x="4" y="52" width="44" height="6" rx="2" fill="#16a34a"/>
             </svg>
           ),
         },
@@ -2068,54 +2791,106 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         {
           value: "banner-bottom", label: "Bottom Banner",
           preview: (
-            <svg width="50" height="58" viewBox="0 0 50 58" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="4" y="4" width="42" height="42" rx="3"/>
-              <rect x="4" y="49" width="42" height="7" rx="2" fill="currentColor" fillOpacity="0.15"/>
+            <svg width="50" height="60" viewBox="0 0 50 60" fill="none">
+              <defs>
+                <linearGradient id="f-banner-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#7c3aed"/>
+                  <stop offset="100%" stopColor="#2563eb"/>
+                </linearGradient>
+              </defs>
+              <rect x="3" y="3" width="44" height="44" rx="4" stroke="#64748b" strokeWidth="1.5"/>
+              <rect x="8" y="8" width="12" height="12" rx="1" fill="#94a3b8" opacity="0.4"/>
+              <rect x="22" y="8" width="12" height="12" rx="1" fill="#94a3b8" opacity="0.4"/>
+              <rect x="8" y="22" width="12" height="12" rx="1" fill="#94a3b8" opacity="0.4"/>
+              <rect x="3" y="49" width="44" height="9" rx="3" fill="url(#f-banner-grad)"/>
+              <line x1="14" y1="54" x2="36" y2="54" stroke="white" strokeWidth="1.5" opacity="0.8"/>
             </svg>
           ),
         },
         {
           value: "banner-top", label: "Top Banner",
           preview: (
-            <svg width="50" height="58" viewBox="0 0 50 58" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="4" y="2" width="42" height="7" rx="2" fill="currentColor" fillOpacity="0.15"/>
-              <rect x="4" y="12" width="42" height="42" rx="3"/>
+            <svg width="50" height="60" viewBox="0 0 50 60" fill="none">
+              <defs>
+                <linearGradient id="f-topbanner-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#0891b2"/>
+                  <stop offset="100%" stopColor="#7c3aed"/>
+                </linearGradient>
+              </defs>
+              <rect x="3" y="2" width="44" height="9" rx="3" fill="url(#f-topbanner-grad)"/>
+              <line x1="14" y1="7" x2="36" y2="7" stroke="white" strokeWidth="1.5" opacity="0.8"/>
+              <rect x="3" y="13" width="44" height="44" rx="4" stroke="#64748b" strokeWidth="1.5"/>
+              <rect x="8" y="18" width="12" height="12" rx="1" fill="#94a3b8" opacity="0.4"/>
+              <rect x="22" y="18" width="12" height="12" rx="1" fill="#94a3b8" opacity="0.4"/>
+              <rect x="8" y="32" width="12" height="12" rx="1" fill="#94a3b8" opacity="0.4"/>
             </svg>
           ),
         },
         {
           value: "bubble-bottom", label: "Bubble Down",
           preview: (
-            <svg width="50" height="60" viewBox="0 0 50 60" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="4" y="4" width="42" height="42" rx="6"/>
-              <path d="M20 46L25 56L30 46Z" fill="currentColor" fillOpacity="0.2"/>
+            <svg width="52" height="64" viewBox="0 0 52 64" fill="none">
+              <defs>
+                <linearGradient id="f-bubble-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#ec4899"/>
+                  <stop offset="100%" stopColor="#8b5cf6"/>
+                </linearGradient>
+              </defs>
+              <rect x="3" y="3" width="46" height="46" rx="10" stroke="url(#f-bubble-grad)" strokeWidth="2.5" fill="none"/>
+              <rect x="3" y="3" width="46" height="46" rx="10" fill="url(#f-bubble-grad)" opacity="0.08"/>
+              <path d="M20 49L26 60L32 49Z" fill="url(#f-bubble-grad)"/>
             </svg>
           ),
         },
         {
           value: "bubble-top", label: "Bubble Up",
           preview: (
-            <svg width="50" height="60" viewBox="0 0 50 60" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M20 12L25 2L30 12Z" fill="currentColor" fillOpacity="0.2"/>
-              <rect x="4" y="12" width="42" height="42" rx="6"/>
+            <svg width="52" height="64" viewBox="0 0 52 64" fill="none">
+              <defs>
+                <linearGradient id="f-bubbletop-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#f97316"/>
+                  <stop offset="100%" stopColor="#ef4444"/>
+                </linearGradient>
+              </defs>
+              <path d="M20 15L26 4L32 15Z" fill="url(#f-bubbletop-grad)"/>
+              <rect x="3" y="15" width="46" height="46" rx="10" stroke="url(#f-bubbletop-grad)" strokeWidth="2.5" fill="none"/>
+              <rect x="3" y="15" width="46" height="46" rx="10" fill="url(#f-bubbletop-grad)" opacity="0.08"/>
             </svg>
           ),
         },
         {
           value: "elegant-border", label: "Elegant",
           preview: (
-            <svg width="50" height="58" viewBox="0 0 50 58" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="3" y="3" width="44" height="44" rx="2" strokeWidth="3"/>
-              <rect x="3" y="49" width="44" height="7" rx="2" fill="currentColor" fillOpacity="0.15"/>
+            <svg width="52" height="60" viewBox="0 0 52 60" fill="none">
+              <defs>
+                <linearGradient id="f-elegant-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#1e293b"/>
+                  <stop offset="100%" stopColor="#475569"/>
+                </linearGradient>
+              </defs>
+              <rect x="2" y="2" width="48" height="48" rx="2" stroke="url(#f-elegant-grad)" strokeWidth="4"/>
+              <rect x="8" y="8" width="36" height="36" rx="1" stroke="#94a3b8" strokeWidth="1" opacity="0.4"/>
+              <rect x="2" y="50" width="48" height="8" rx="2" fill="url(#f-elegant-grad)"/>
+              <line x1="12" y1="54" x2="40" y2="54" stroke="#94a3b8" strokeWidth="1" opacity="0.6"/>
             </svg>
           ),
         },
         {
           value: "corners-only", label: "Brackets",
           preview: (
-            <svg width="50" height="50" viewBox="0 0 50 50" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M4 16V4H16"/><path d="M34 4H46V16"/>
-              <path d="M4 34V46H16"/><path d="M34 46H46V34"/>
+            <svg width="52" height="60" viewBox="0 0 52 60" fill="none">
+              <defs>
+                <linearGradient id="f-corners-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#06b6d4"/>
+                  <stop offset="100%" stopColor="#2563eb"/>
+                </linearGradient>
+              </defs>
+              <path d="M4 18V4H18" stroke="url(#f-corners-grad)" strokeWidth="3.5" strokeLinecap="round"/>
+              <path d="M34 4H48V18" stroke="url(#f-corners-grad)" strokeWidth="3.5" strokeLinecap="round"/>
+              <path d="M4 34V48H18" stroke="url(#f-corners-grad)" strokeWidth="3.5" strokeLinecap="round"/>
+              <path d="M34 48H48V34" stroke="url(#f-corners-grad)" strokeWidth="3.5" strokeLinecap="round"/>
+              <rect x="16" y="16" width="20" height="20" rx="2" fill="#06b6d4" opacity="0.1"/>
+              <rect x="5" y="52" width="42" height="6" rx="2" fill="url(#f-corners-grad)"/>
             </svg>
           ),
         },
@@ -2127,29 +2902,74 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         {
           value: "phone-bezel", label: "Phone",
           preview: (
-            <svg width="44" height="62" viewBox="0 0 44 62" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="4" y="4" width="36" height="54" rx="6"/>
-              <line x1="18" y1="7.5" x2="26" y2="7.5" strokeWidth="2" strokeLinecap="round"/>
-              <circle cx="22" cy="57" r="2.5"/>
+            <svg width="44" height="64" viewBox="0 0 44 64" fill="none">
+              <defs>
+                <linearGradient id="f-phone-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#1e293b"/>
+                  <stop offset="100%" stopColor="#334155"/>
+                </linearGradient>
+              </defs>
+              <rect x="2" y="2" width="40" height="60" rx="8" fill="url(#f-phone-grad)"/>
+              <rect x="5" y="10" width="34" height="44" rx="3" fill="#f8fafc"/>
+              <rect x="16" y="4.5" width="12" height="3" rx="1.5" fill="#64748b"/>
+              <circle cx="22" cy="59" r="2.5" stroke="#475569" strokeWidth="1.5" fill="none"/>
             </svg>
           ),
         },
         {
           value: "clipboard", label: "Clipboard",
           preview: (
-            <svg width="48" height="58" viewBox="0 0 48 58" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="4" y="8" width="40" height="46" rx="3"/>
-              <rect x="16" y="4" width="16" height="8" rx="2"/>
-              <line x1="16" y1="8" x2="32" y2="8" stroke="currentColor" strokeWidth="2"/>
+            <svg width="48" height="60" viewBox="0 0 48 60" fill="none">
+              <defs>
+                <linearGradient id="f-clip-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#d97706"/>
+                  <stop offset="100%" stopColor="#f59e0b"/>
+                </linearGradient>
+              </defs>
+              <rect x="4" y="10" width="40" height="48" rx="4" fill="white" stroke="url(#f-clip-grad)" strokeWidth="2"/>
+              <rect x="14" y="3" width="20" height="12" rx="3" fill="url(#f-clip-grad)"/>
+              <circle cx="24" cy="9" r="2.5" fill="white"/>
+              <rect x="10" y="50" width="28" height="5" rx="2" fill="url(#f-clip-grad)" opacity="0.8"/>
             </svg>
           ),
         },
         {
           value: "laptop-monitor", label: "Laptop",
           preview: (
-            <svg width="56" height="50" viewBox="0 0 56 50" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="8" y="4" width="40" height="30" rx="3"/>
-              <path d="M2 36H54L50 46H6Z"/>
+            <svg width="58" height="52" viewBox="0 0 58 52" fill="none">
+              <defs>
+                <linearGradient id="f-laptop-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#334155"/>
+                  <stop offset="100%" stopColor="#1e293b"/>
+                </linearGradient>
+              </defs>
+              <rect x="6" y="3" width="46" height="32" rx="4" fill="url(#f-laptop-grad)"/>
+              <rect x="9" y="6" width="40" height="26" rx="2" fill="#f1f5f9"/>
+              <path d="M2 38H56L52 50H6Z" fill="url(#f-laptop-grad)"/>
+              <rect x="20" y="43" width="18" height="3" rx="1.5" fill="#64748b"/>
+            </svg>
+          ),
+        },
+        {
+          value: "retro-tv", label: "Retro TV",
+          preview: (
+            <svg width="52" height="64" viewBox="0 0 52 64" fill="none">
+              <defs>
+                <linearGradient id="f-tv-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#7c3aed"/>
+                  <stop offset="100%" stopColor="#4c1d95"/>
+                </linearGradient>
+              </defs>
+              <rect x="2" y="2" width="48" height="60" rx="10" fill="url(#f-tv-grad)"/>
+              <rect x="7" y="8" width="38" height="36" rx="4" fill="#f8fafc"/>
+              <line x1="26" y1="8" x2="18" y2="2" stroke="#c4b5fd" strokeWidth="3" strokeLinecap="round"/>
+              <line x1="26" y1="8" x2="34" y2="2" stroke="#c4b5fd" strokeWidth="3" strokeLinecap="round"/>
+              <circle cx="15" cy="55" r="5" fill="#1e293b"/>
+              <circle cx="26" cy="55" r="5" fill="#1e293b"/>
+              <circle cx="37" cy="55" r="5" fill="#1e293b"/>
+              <circle cx="15" cy="55" r="2" fill="#64748b"/>
+              <circle cx="26" cy="55" r="2" fill="#64748b"/>
+              <circle cx="37" cy="55" r="2" fill="#64748b"/>
             </svg>
           ),
         },
@@ -2161,42 +2981,73 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         {
           value: "shopping-bag", label: "Shop Bag",
           preview: (
-            <svg width="50" height="58" viewBox="0 0 50 58" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M8 16H42L38 54H12Z"/>
-              <path d="M18 16C18 10 20 6 25 6C30 6 32 10 32 16"/>
+            <svg width="50" height="60" viewBox="0 0 50 60" fill="none">
+              <defs>
+                <linearGradient id="f-bag-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#ec4899"/>
+                  <stop offset="100%" stopColor="#8b5cf6"/>
+                </linearGradient>
+              </defs>
+              <path d="M8 16H42L38 56H12Z" fill="white" stroke="url(#f-bag-grad)" strokeWidth="2"/>
+              <path d="M18 16C18 10 20 5 25 5C30 5 32 10 32 16" stroke="url(#f-bag-grad)" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+              <rect x="12" y="46" width="26" height="7" rx="2" fill="url(#f-bag-grad)" opacity="0.85"/>
+              <line x1="18" y1="50" x2="32" y2="50" stroke="white" strokeWidth="1" opacity="0.8"/>
             </svg>
           ),
         },
         {
           value: "tag-pendant", label: "Price Tag",
           preview: (
-            <svg width="46" height="60" viewBox="0 0 46 60" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <circle cx="23" cy="6" r="4"/>
-              <rect x="4" y="10" width="38" height="46" rx="5"/>
-              <line x1="23" y1="6" x2="23" y2="10"/>
+            <svg width="46" height="62" viewBox="0 0 46 62" fill="none">
+              <defs>
+                <linearGradient id="f-tag-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#059669"/>
+                  <stop offset="100%" stopColor="#0891b2"/>
+                </linearGradient>
+              </defs>
+              <circle cx="23" cy="7" r="5" stroke="url(#f-tag-grad)" strokeWidth="2" fill="none"/>
+              <circle cx="23" cy="7" r="2" fill="#059669"/>
+              <rect x="3" y="11" width="40" height="48" rx="6" fill="white" stroke="url(#f-tag-grad)" strokeWidth="2"/>
+              <line x1="23" y1="7" x2="23" y2="11" stroke="url(#f-tag-grad)" strokeWidth="2"/>
+              <rect x="6" y="50" width="34" height="7" rx="3" fill="url(#f-tag-grad)"/>
             </svg>
           ),
         },
         {
           value: "ticket-coupon", label: "Coupon",
           preview: (
-            <svg width="60" height="42" viewBox="0 0 60 42" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="4" y="4" width="52" height="34" rx="3"/>
-              <circle cx="4" cy="21" r="5" fill="var(--bg-card)"/>
-              <circle cx="56" cy="21" r="5" fill="var(--bg-card)"/>
-              <line x1="30" y1="4" x2="30" y2="38" strokeDasharray="3 3"/>
+            <svg width="62" height="44" viewBox="0 0 62 44" fill="none">
+              <defs>
+                <linearGradient id="f-ticket-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#f97316"/>
+                  <stop offset="100%" stopColor="#eab308"/>
+                </linearGradient>
+              </defs>
+              <rect x="3" y="3" width="56" height="38" rx="4" fill="white" stroke="url(#f-ticket-grad)" strokeWidth="2"/>
+              <circle cx="3" cy="22" r="6" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1"/>
+              <circle cx="59" cy="22" r="6" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1"/>
+              <line x1="31" y1="3" x2="31" y2="41" stroke="#fed7aa" strokeWidth="1.5" strokeDasharray="3 3"/>
+              <rect x="8" y="32" width="20" height="7" rx="2" fill="url(#f-ticket-grad)" opacity="0.8"/>
+              <rect x="34" y="32" width="20" height="7" rx="2" fill="url(#f-ticket-grad)" opacity="0.8"/>
             </svg>
           ),
         },
         {
           value: "gift-box", label: "Gift Box",
           preview: (
-            <svg width="50" height="58" viewBox="0 0 50 58" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="4" y="16" width="42" height="38" rx="3"/>
-              <rect x="4" y="8" width="42" height="10" rx="2" fill="currentColor" fillOpacity="0.12"/>
-              <path d="M25 8C25 8 20 2 17 4C14 6 16 8 25 8"/>
-              <path d="M25 8C25 8 30 2 33 4C36 6 34 8 25 8"/>
-              <line x1="25" y1="8" x2="25" y2="54"/>
+            <svg width="52" height="60" viewBox="0 0 52 60" fill="none">
+              <defs>
+                <linearGradient id="f-gift-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#ef4444"/>
+                  <stop offset="100%" stopColor="#f97316"/>
+                </linearGradient>
+              </defs>
+              <rect x="4" y="16" width="44" height="40" rx="3" fill="white" stroke="url(#f-gift-grad)" strokeWidth="2"/>
+              <rect x="4" y="8" width="44" height="10" rx="2" fill="url(#f-gift-grad)" opacity="0.9"/>
+              <path d="M26 8C26 8 20 2 16 4C13 6 15 8 26 8" fill="#ef4444"/>
+              <path d="M26 8C26 8 32 2 36 4C39 6 37 8 26 8" fill="#f97316"/>
+              <line x1="26" y1="8" x2="26" y2="56" stroke="url(#f-gift-grad)" strokeWidth="2"/>
+              <rect x="6" y="50" width="40" height="6" rx="2" fill="url(#f-gift-grad)" opacity="0.8"/>
             </svg>
           ),
         },
@@ -2208,42 +3059,83 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         {
           value: "circular-ring", label: "Ring",
           preview: (
-            <svg width="52" height="52" viewBox="0 0 52 52" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="26" cy="26" r="22"/>
-              <circle cx="26" cy="26" r="17"/>
+            <svg width="56" height="64" viewBox="0 0 56 64" fill="none">
+              <defs>
+                <linearGradient id="f-ring-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#7c3aed"/>
+                  <stop offset="50%" stopColor="#ec4899"/>
+                  <stop offset="100%" stopColor="#2563eb"/>
+                </linearGradient>
+              </defs>
+              <circle cx="28" cy="26" r="23" stroke="url(#f-ring-grad)" strokeWidth="4" fill="none"/>
+              <circle cx="28" cy="26" r="17" stroke="url(#f-ring-grad)" strokeWidth="1.5" fill="none" opacity="0.5"/>
+              <rect x="10" y="52" width="36" height="8" rx="3" fill="url(#f-ring-grad)"/>
             </svg>
           ),
         },
         {
           value: "dashed-border", label: "Dashed",
           preview: (
-            <svg width="50" height="50" viewBox="0 0 50 50" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="4" y="4" width="42" height="42" rx="2" strokeDasharray="4 3"/>
+            <svg width="52" height="60" viewBox="0 0 52 60" fill="none">
+              <defs>
+                <linearGradient id="f-dash-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#0891b2"/>
+                  <stop offset="100%" stopColor="#06b6d4"/>
+                </linearGradient>
+              </defs>
+              <rect x="3" y="3" width="46" height="46" rx="4" stroke="url(#f-dash-grad)" strokeWidth="3" strokeDasharray="5 4"/>
+              <rect x="10" y="10" width="32" height="32" rx="2" fill="#cffafe" opacity="0.3"/>
+              <rect x="4" y="51" width="44" height="7" rx="3" fill="url(#f-dash-grad)"/>
             </svg>
           ),
         },
         {
           value: "double-border", label: "Double",
           preview: (
-            <svg width="50" height="50" viewBox="0 0 50 50" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="3" y="3" width="44" height="44" rx="2"/>
-              <rect x="7" y="7" width="36" height="36" rx="1"/>
+            <svg width="52" height="60" viewBox="0 0 52 60" fill="none">
+              <defs>
+                <linearGradient id="f-double-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#1e293b"/>
+                  <stop offset="100%" stopColor="#475569"/>
+                </linearGradient>
+              </defs>
+              <rect x="2" y="2" width="48" height="48" rx="3" stroke="url(#f-double-grad)" strokeWidth="3"/>
+              <rect x="8" y="8" width="36" height="36" rx="2" stroke="url(#f-double-grad)" strokeWidth="1.5"/>
+              <rect x="3" y="52" width="46" height="6" rx="2" fill="url(#f-double-grad)"/>
             </svg>
           ),
         },
         {
           value: "heart-love", label: "Heart",
           preview: (
-            <svg width="52" height="50" viewBox="0 0 52 50" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M26 44C26 44 4 30 4 16C4 8 10 4 16 6C20 7 24 10 26 14C28 10 32 7 36 6C42 4 48 8 48 16C48 30 26 44 26 44Z"/>
+            <svg width="54" height="60" viewBox="0 0 54 60" fill="none">
+              <defs>
+                <linearGradient id="f-heart-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#f43f5e"/>
+                  <stop offset="100%" stopColor="#ec4899"/>
+                </linearGradient>
+              </defs>
+              <path d="M27 46C27 46 4 32 4 18C4 9 10 5 17 7C21 8 25 11 27 15C29 11 33 8 37 7C44 5 50 9 50 18C50 32 27 46 27 46Z" stroke="url(#f-heart-grad)" strokeWidth="2.5" fill="none"/>
+              <path d="M27 46C27 46 4 32 4 18C4 9 10 5 17 7C21 8 25 11 27 15C29 11 33 8 37 7C44 5 50 9 50 18C50 32 27 46 27 46Z" fill="url(#f-heart-grad)" opacity="0.12"/>
+              <rect x="8" y="52" width="38" height="6" rx="2" fill="url(#f-heart-grad)"/>
             </svg>
           ),
         },
         {
           value: "star-sparkle", label: "Star",
           preview: (
-            <svg width="52" height="52" viewBox="0 0 52 52" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M26 4L30 18H44L33 27L37 41L26 32L15 41L19 27L8 18H22Z"/>
+            <svg width="54" height="62" viewBox="0 0 54 62" fill="none">
+              <defs>
+                <linearGradient id="f-star-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#f59e0b"/>
+                  <stop offset="100%" stopColor="#f97316"/>
+                </linearGradient>
+              </defs>
+              <path d="M27 3L32 18H48L35 28L40 43L27 33L14 43L19 28L6 18H22Z" stroke="url(#f-star-grad)" strokeWidth="2" fill="none"/>
+              <path d="M27 3L32 18H48L35 28L40 43L27 33L14 43L19 28L6 18H22Z" fill="url(#f-star-grad)" opacity="0.15"/>
+              <path d="M5 5Q5 5 5 8Q5 5 8 5Q5 5 5 2Q5 5 2 5Z" fill="#f59e0b"/>
+              <path d="M49 5Q49 5 49 8Q49 5 52 5Q49 5 49 2Q49 5 46 5Z" fill="#f59e0b"/>
+              <rect x="7" y="54" width="40" height="6" rx="2" fill="url(#f-star-grad)"/>
             </svg>
           ),
         },
@@ -2255,35 +3147,126 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         {
           value: "book-cover", label: "Book",
           preview: (
-            <svg width="46" height="56" viewBox="0 0 46 56" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="8" y="4" width="34" height="48" rx="2"/>
-              <rect x="4" y="4" width="6" height="48" rx="1" fill="currentColor" fillOpacity="0.12"/>
+            <svg width="48" height="60" viewBox="0 0 48 60" fill="none">
+              <defs>
+                <linearGradient id="f-book-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#7c3aed"/>
+                  <stop offset="100%" stopColor="#4c1d95"/>
+                </linearGradient>
+              </defs>
+              <rect x="3" y="3" width="42" height="54" rx="3" fill="url(#f-book-grad)"/>
+              <rect x="10" y="3" width="35" height="54" rx="2" fill="white" stroke="#e2e8f0" strokeWidth="1"/>
+              <rect x="3" y="3" width="8" height="54" rx="2" fill="url(#f-book-grad)"/>
+              <line x1="3" y1="12" x2="11" y2="12" stroke="#a78bfa" strokeWidth="1" opacity="0.5"/>
+              <line x1="3" y1="26" x2="11" y2="26" stroke="#a78bfa" strokeWidth="1" opacity="0.5"/>
+              <line x1="3" y1="40" x2="11" y2="40" stroke="#a78bfa" strokeWidth="1" opacity="0.5"/>
+              <rect x="14" y="48" width="28" height="6" rx="2" fill="url(#f-book-grad)" opacity="0.8"/>
             </svg>
           ),
         },
         {
           value: "coffee-cup", label: "Mug",
           preview: (
-            <svg width="52" height="54" viewBox="0 0 52 54" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M8 8H38L34 50H12Z"/>
-              <path d="M38 16C38 16 46 16 46 24C46 32 38 32 38 32"/>
+            <svg width="54" height="60" viewBox="0 0 54 60" fill="none">
+              <defs>
+                <linearGradient id="f-mug-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#78350f"/>
+                  <stop offset="100%" stopColor="#92400e"/>
+                </linearGradient>
+              </defs>
+              <path d="M8 6H40L36 52H12Z" fill="#fef3c7" stroke="url(#f-mug-grad)" strokeWidth="2"/>
+              <path d="M40 16C40 16 50 16 50 26C50 36 40 36 40 36" stroke="url(#f-mug-grad)" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+              <rect x="10" y="44" width="28" height="7" rx="2" fill="url(#f-mug-grad)" opacity="0.85"/>
+              <path d="M17 3C17 3 17 0 19 3C19 6 17 9 19 12" stroke="#94a3b8" strokeWidth="1" fill="none" strokeLinecap="round"/>
+              <path d="M24 2C24 2 24 -1 26 2C26 5 24 8 26 11" stroke="#94a3b8" strokeWidth="1" fill="none" strokeLinecap="round"/>
             </svg>
           ),
         },
         {
           value: "envelope-mail", label: "Envelope",
           preview: (
-            <svg width="56" height="44" viewBox="0 0 56 44" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="4" y="4" width="48" height="36" rx="3"/>
-              <path d="M4 8L28 24L52 8"/>
+            <svg width="58" height="50" viewBox="0 0 58 50" fill="none">
+              <defs>
+                <linearGradient id="f-env-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#2563eb"/>
+                  <stop offset="100%" stopColor="#0891b2"/>
+                </linearGradient>
+              </defs>
+              <rect x="3" y="8" width="52" height="38" rx="4" fill="white" stroke="url(#f-env-grad)" strokeWidth="2"/>
+              <path d="M3 10L29 26L55 10" stroke="url(#f-env-grad)" strokeWidth="2" strokeLinecap="round" fill="none"/>
+              <rect x="6" y="40" width="46" height="5" rx="2" fill="url(#f-env-grad)" opacity="0.8"/>
             </svg>
           ),
         },
         {
           value: "shield-badge", label: "Shield",
           preview: (
-            <svg width="50" height="58" viewBox="0 0 50 58" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M25 4L4 12V28C4 42 25 54 25 54C25 54 46 42 46 28V12Z"/>
+            <svg width="52" height="62" viewBox="0 0 52 62" fill="none">
+              <defs>
+                <linearGradient id="f-shield-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#059669"/>
+                  <stop offset="100%" stopColor="#0891b2"/>
+                </linearGradient>
+              </defs>
+              <path d="M26 3L4 11V28C4 44 26 56 26 56C26 56 48 44 48 28V11Z" fill="white" stroke="url(#f-shield-grad)" strokeWidth="2.5"/>
+              <path d="M26 3L4 11V28C4 44 26 56 26 56C26 56 48 44 48 28V11Z" fill="url(#f-shield-grad)" opacity="0.1"/>
+              <rect x="8" y="54" width="36" height="6" rx="2" fill="url(#f-shield-grad)"/>
+            </svg>
+          ),
+        },
+      ],
+    },
+    {
+      category: "Tech & Gaming",
+      frames: [
+        {
+          value: "circuit-board", label: "Circuit",
+          preview: (
+            <svg width="52" height="60" viewBox="0 0 52 60" fill="none">
+              <defs>
+                <linearGradient id="f-circuit-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#059669"/>
+                  <stop offset="100%" stopColor="#047857"/>
+                </linearGradient>
+              </defs>
+              <rect x="3" y="3" width="46" height="46" rx="2" stroke="url(#f-circuit-grad)" strokeWidth="3"/>
+              <rect x="9" y="9" width="34" height="34" rx="1" stroke="#059669" strokeWidth="1" opacity="0.4"/>
+              <line x1="3" y1="15" x2="16" y2="15" stroke="#059669" strokeWidth="2"/>
+              <line x1="3" y1="27" x2="12" y2="27" stroke="#059669" strokeWidth="2"/>
+              <line x1="49" y1="15" x2="36" y2="15" stroke="#059669" strokeWidth="2"/>
+              <line x1="49" y1="27" x2="38" y2="27" stroke="#059669" strokeWidth="2"/>
+              <line x1="15" y1="3" x2="15" y2="14" stroke="#059669" strokeWidth="2"/>
+              <line x1="27" y1="3" x2="27" y2="12" stroke="#059669" strokeWidth="2"/>
+              <circle cx="16" cy="15" r="3" fill="#059669"/>
+              <circle cx="12" cy="27" r="3" fill="#059669"/>
+              <circle cx="36" cy="15" r="3" fill="#059669"/>
+              <circle cx="38" cy="27" r="3" fill="#059669"/>
+              <circle cx="15" cy="14" r="3" fill="#059669"/>
+              <circle cx="27" cy="12" r="3" fill="#059669"/>
+              <rect x="4" y="51" width="44" height="7" rx="1" fill="url(#f-circuit-grad)"/>
+              <line x1="12" y1="55" x2="40" y2="55" stroke="#00ff88" strokeWidth="1.5" opacity="0.8"/>
+            </svg>
+          ),
+        },
+        {
+          value: "trophy", label: "Trophy",
+          preview: (
+            <svg width="52" height="64" viewBox="0 0 52 64" fill="none">
+              <defs>
+                <linearGradient id="f-trophy-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#fbbf24"/>
+                  <stop offset="50%" stopColor="#d97706"/>
+                  <stop offset="100%" stopColor="#fbbf24"/>
+                </linearGradient>
+              </defs>
+              <rect x="3" y="3" width="46" height="50" rx="6" stroke="url(#f-trophy-ring)" strokeWidth="5"/>
+              <rect x="11" y="11" width="30" height="30" rx="3" stroke="#fef3c7" strokeWidth="2"/>
+              <path d="M12 12L14 15H17L15 17L16 20L12 18L8 20L9 17L7 15H10Z" fill="#fbbf24"/>
+              <path d="M40 12L42 15H45L43 17L44 20L40 18L36 20L37 17L35 15H38Z" fill="#fbbf24"/>
+              <rect x="19" y="4" width="14" height="8" rx="2" fill="url(#f-trophy-ring)"/>
+              <path d="M21 6H31L30 10H22Z" fill="#fbbf24"/>
+              <rect x="4" y="56" width="44" height="6" rx="3" fill="url(#f-trophy-ring)"/>
+              <line x1="12" y1="59" x2="40" y2="59" stroke="#fef3c7" strokeWidth="1.2" opacity="0.8"/>
             </svg>
           ),
         },
