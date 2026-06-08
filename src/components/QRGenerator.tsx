@@ -2292,14 +2292,14 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                   )}
                 </div>
                 <div className="qr-actions" style={{ marginTop: 12, display: "flex", gap: 6, position: "relative" }}>
-                  <div style={{ display: "flex", flex: 1, position: "relative" }}>
+                  <div style={{ display: "flex", flex: 1.6, position: "relative" }}>
                     <button 
                       className="btn btn-primary" 
-                      style={{ flex: 1, padding: "6px 4px", fontSize: "10px", height: "32px", borderTopRightRadius: 0, borderBottomRightRadius: 0 }} 
+                      style={{ flex: 1, padding: "6px 2px", fontSize: "10px", height: "32px", borderTopRightRadius: 0, borderBottomRightRadius: 0 }} 
                       disabled={!qrDataUrl} 
                       onClick={handleDownloadPNG}
                     >
-                      PNG ({customStyle.downloadSize})
+                      PNG
                     </button>
                     <button
                       type="button"
