@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import QRCode from "qrcode";
@@ -582,9 +582,9 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
 
   const handleShareQR = async () => {
     if (!qrDataUrl) return;
-    const shareLink = getShareLink();
-    const title = "My Custom QR Code | HappyQR";
-    const shareText = "Create customized QR codes with logo, frames, shapes and colors at HappyQR!";
+    const shareLink = window.location.origin;
+    const title = "HappyQR — Free Custom QR Code Generator";
+    const shareText = "Create your own customized QR codes with logo, frames, shapes and colors for free at HappyQR!";
     
     if (navigator.share) {
       try {
@@ -612,9 +612,9 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
     } else {
       try {
         await navigator.clipboard.writeText(shareLink);
-        showToast("Share link copied to clipboard!", "success");
+        showToast("Website link copied to clipboard!", "success");
       } catch {
-        showToast("Failed to copy share link.", "error");
+        showToast("Failed to copy link.", "error");
       }
     }
   };

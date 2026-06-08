@@ -65,9 +65,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
             (window as any).google.accounts.id.renderButton(btnContainer, {
               theme: "outline",
               size: "large",
-              width: "100%",
               text: "continue_with",
               shape: "pill",
+              alignment: "center",
             });
           }
         } catch (err) {
@@ -111,8 +111,8 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
           {isLoginTab ? "Sign in to access advanced template settings" : "Sign up for HappyQR"}
         </p>
 
-        <div style={{ marginTop: "16px", marginBottom: "16px", minHeight: "40px", display: "flex", justifyContent: "center" }}>
-          <div id="google-signin-btn" style={{ width: "100%" }} />
+        <div style={{ marginTop: "16px", marginBottom: "16px", minHeight: "40px", display: "flex", justifyContent: "center", alignItems: "center", width: "100%" }}>
+          <div id="google-signin-btn" style={{ display: "flex", justifyContent: "center", width: "100%" }} />
         </div>
 
         <div className="auth-divider" style={{ display: "flex", alignItems: "center", marginBottom: "16px", color: "var(--text-tertiary)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px" }}>

@@ -108,7 +108,7 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.json",
   verification: {
-    google: "YOUR_GOOGLE_SEARCH_CONSOLE_VERIFICATION_CODE",
+    google: "NwPpJdb-rS1rt6nCc0LpF5DB7Iaxd5Tu0C9OnsgDu3c",
   },
 };
 
