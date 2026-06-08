@@ -20,9 +20,35 @@ import {
   Shapes,
   Palette,
   Image as ImageIcon,
-  Frame
+  Frame,
+  Copy,
+  Download,
+  Share2
 } from "lucide-react";
 
+
+interface SharedConfig {
+  c: string; // content (text)
+  ct: string; // contentType
+  m: string; // moduleType
+  co: string; // cornerOuter
+  ci: string; // cornerInner
+  fg: string; // fgColor
+  bg: string; // bgColor
+  fgs: string; // fgStyle
+  gs: string; // gradientStart
+  ge: string; // gradientEnd
+  gt: string; // gradientType
+  gd: string; // gradientDir
+  fs: string; // frameStyle
+  fc: string; // frameColor
+  lt: string; // labelText
+  lc: string; // labelColor
+  bt: string; // qrBorderType
+  bc: string; // qrBorderColor
+  bs: number; // qrBorderSize
+  br: number; // qrBorderRadius
+}
 
 interface QRGeneratorProps {
   onGenerate: (entry: QRHistoryEntry) => void;
@@ -48,7 +74,6 @@ interface CustomQRStyle {
   labelFont: string;
   labelOrientation: "horizontal" | "vertical";
   
-  // Premium features states
   fgStyle: "solid" | "gradient";
   gradientStart: string;
   gradientEnd: string;
@@ -61,6 +86,12 @@ interface CustomQRStyle {
   marginSize: number;
   downloadSize: 256 | 512 | 1024 | 2048;
   errorCorrection: "L" | "M" | "Q" | "H";
+
+  // QR Outer Border settings
+  qrBorderType: "none" | "solid" | "dashed" | "dotted" | "double";
+  qrBorderColor: string;
+  qrBorderSize: number;
+  qrBorderRadius: number;
 }
 
 function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, spikes: number, outerRadius: number, innerRadius: number) {
@@ -116,6 +147,11 @@ const defaultStyles: CustomQRStyle = {
   marginSize: 16,
   downloadSize: 512,
   errorCorrection: "H",
+
+  qrBorderType: "none",
+  qrBorderColor: "#7c3aed",
+  qrBorderSize: 4,
+  qrBorderRadius: 12,
 };
 
 const defaultSettings: QRSettings = {
@@ -512,6 +548,174 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
     }
   };
 
+  const getShareLink = () => {
+    const configObj: Partial<SharedConfig> = {
+      c: text,
+      ct: contentType,
+      m: customStyle.moduleType,
+      co: customStyle.cornerOuter,
+      ci: customStyle.cornerInner,
+      fg: settings.fgColor,
+      bg: settings.bgColor,
+      fgs: customStyle.fgStyle,
+      gs: customStyle.gradientStart,
+      ge: customStyle.gradientEnd,
+      gt: customStyle.gradientType,
+      gd: customStyle.gradientDir,
+      fs: customStyle.frameStyle,
+      fc: customStyle.frameColor,
+      lt: customStyle.labelText,
+      lc: customStyle.labelColor,
+      bt: customStyle.qrBorderType,
+      bc: customStyle.qrBorderColor,
+      bs: customStyle.qrBorderSize,
+      br: customStyle.qrBorderRadius,
+    };
+    try {
+      const jsonStr = JSON.stringify(configObj);
+      const b64 = btoa(encodeURIComponent(jsonStr));
+      return `${window.location.origin}${window.location.pathname}?qr=${b64}`;
+    } catch (e) {
+      return window.location.href;
+    }
+  };
+
+  const handleShareQR = async () => {
+    if (!qrDataUrl) return;
+    const shareLink = getShareLink();
+    const title = "My Custom QR Code | HappyQR";
+    const shareText = "Create customized QR codes with logo, frames, shapes and colors at HappyQR!";
+    
+    if (navigator.share) {
+      try {
+        const response = await fetch(qrDataUrl);
+        const blob = await response.blob();
+        const file = new File([blob], "happyqr.png", { type: "image/png" });
+        
+        const shareData: ShareData = {
+          title,
+          text: shareText,
+          url: shareLink,
+        };
+        
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          shareData.files = [file];
+        }
+        
+        await navigator.share(shareData);
+        showToast("Shared successfully!", "success");
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          showToast("Sharing failed.", "error");
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareLink);
+        showToast("Share link copied to clipboard!", "success");
+      } catch {
+        showToast("Failed to copy share link.", "error");
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const qrParam = urlParams.get("qr");
+    if (qrParam) {
+      try {
+        const decoded = decodeURIComponent(atob(qrParam));
+        const config: Partial<SharedConfig> = JSON.parse(decoded);
+        
+        if (config.c !== undefined) setText(config.c);
+        if (config.ct !== undefined) setContentType(config.ct as any);
+        
+        // Update input field values based on type
+        if (config.ct === "url") {
+          setUrlVal(config.c || "");
+        } else if (config.ct === "text") {
+          setTextVal(config.c || "");
+        } else if (config.ct === "phone") {
+          const matched = config.c?.match(/^tel:(.*)$/);
+          if (matched) setPhoneVal(matched[1]);
+        } else if (config.ct === "email") {
+          const matched = config.c?.match(/^mailto:([^?]*)(?:\?subject=([^&]*))?(?:&body=(.*))?$/);
+          if (matched) {
+            setEmailVal(matched[1] || "");
+            setEmailSubject(matched[2] ? decodeURIComponent(matched[2]) : "");
+            setEmailBody(matched[3] ? decodeURIComponent(matched[3]) : "");
+          }
+        } else if (config.ct === "wifi") {
+          const matched = config.c?.match(/^WIFI:T:([^;]*);S:([^;]*);P:([^;]*);;$/);
+          if (matched) {
+            setWifiSecurity(matched[1] || "WPA");
+            setWifiSsid(matched[2] || "");
+            setWifiPassword(matched[3] || "");
+          }
+        } else if (config.ct === "vcard") {
+          const lines = config.c?.split("\n") || [];
+          lines.forEach(line => {
+            if (line.startsWith("N:")) {
+              const parts = line.substring(2).split(";");
+              setVLastName(parts[0] || "");
+              setVFirstName(parts[1] || "");
+            } else if (line.startsWith("ORG:")) {
+              setVOrg(line.substring(4));
+            } else if (line.startsWith("TEL;TYPE=CELL:")) {
+              setVPhone(line.substring(14));
+            } else if (line.startsWith("EMAIL:")) {
+              setVEmail(line.substring(6));
+            } else if (line.startsWith("URL:")) {
+              setVWebsite(line.substring(4));
+            }
+          });
+        } else if (config.ct === "pdf") {
+          setPdfUrl(config.c || "");
+          setPdfName("Shared Document.pdf");
+        } else if (config.ct === "audio") {
+          setAudioUrl(config.c || "");
+          setAudioName("Shared Audio.mp3");
+        }
+        
+        // Update settings
+        setSettings(prev => ({
+          ...prev,
+          fgColor: config.fg || prev.fgColor,
+          bgColor: config.bg || prev.bgColor,
+        }));
+        
+        if (config.fg) setFgHex(config.fg);
+        if (config.bg) setBgHex(config.bg);
+        
+        // Update customStyle
+        setCustomStyle(prev => ({
+          ...prev,
+          moduleType: (config.m || prev.moduleType) as any,
+          cornerOuter: (config.co || prev.cornerOuter) as any,
+          cornerInner: (config.ci || prev.cornerInner) as any,
+          fgStyle: (config.fgs || prev.fgStyle) as any,
+          gradientStart: config.gs || prev.gradientStart,
+          gradientEnd: config.ge || prev.gradientEnd,
+          gradientType: (config.gt || prev.gradientType) as any,
+          gradientDir: (config.gd || prev.gradientDir) as any,
+          frameStyle: (config.fs || prev.frameStyle) as any,
+          frameColor: config.fc || prev.frameColor,
+          labelText: config.lt || prev.labelText,
+          labelColor: config.lc || prev.labelColor,
+          qrBorderType: (config.bt || prev.qrBorderType) as any,
+          qrBorderColor: config.bc || prev.qrBorderColor,
+          qrBorderSize: config.bs !== undefined ? config.bs : prev.qrBorderSize,
+          qrBorderRadius: config.br !== undefined ? config.br : prev.qrBorderRadius,
+        }));
+        
+        showToast("Custom QR design loaded from link!", "success");
+      } catch (e) {
+        console.error("Failed to parse shared QR config:", e);
+      }
+    }
+  }, []);
+
   // Compile inputs states into the main text string reactively
   useEffect(() => {
     if (contentType === "url") {
@@ -699,6 +903,49 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
         }
         ctx.drawImage(bgImg, extraLeft, extraTop, baseQRSize, baseQRSize);
         ctx.restore();
+      }
+
+      // Draw Custom QR Border
+      if (customStyle.qrBorderType && customStyle.qrBorderType !== "none") {
+        ctx.save();
+        ctx.strokeStyle = customStyle.qrBorderColor;
+        ctx.lineWidth = customStyle.qrBorderSize;
+        
+        const strokeOffset = customStyle.qrBorderSize / 2;
+        const bx = extraLeft + strokeOffset;
+        const by = extraTop + strokeOffset;
+        const bw = baseQRSize - customStyle.qrBorderSize;
+        const bh = baseQRSize - customStyle.qrBorderSize;
+        const br = customStyle.qrBorderRadius;
+
+        if (customStyle.qrBorderType === "dashed") {
+          ctx.setLineDash([customStyle.qrBorderSize * 3, customStyle.qrBorderSize * 1.5]);
+        } else if (customStyle.qrBorderType === "dotted") {
+          ctx.setLineDash([customStyle.qrBorderSize, customStyle.qrBorderSize]);
+        } else if (customStyle.qrBorderType === "double") {
+          ctx.beginPath();
+          ctx.roundRect(bx, by, bw, bh, br);
+          ctx.stroke();
+          
+          const innerOffset = Math.max(3, customStyle.qrBorderSize);
+          ctx.lineWidth = Math.max(1, customStyle.qrBorderSize / 2.5);
+          ctx.beginPath();
+          ctx.roundRect(
+            bx + innerOffset, 
+            by + innerOffset, 
+            bw - 2 * innerOffset, 
+            bh - 2 * innerOffset, 
+            Math.max(0, br - innerOffset)
+          );
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          // Solid
+          ctx.beginPath();
+          ctx.roundRect(bx, by, bw, bh, br);
+          ctx.stroke();
+          ctx.restore();
+        }
       }
 
       const qrOffsetX = extraLeft;
@@ -2291,82 +2538,163 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                     </div>
                   )}
                 </div>
-                <div className="qr-actions" style={{ marginTop: 12, display: "flex", gap: 6, position: "relative" }}>
-                  <div style={{ display: "flex", flex: 1.6, position: "relative" }}>
-                    <button 
-                      className="btn btn-primary" 
-                      style={{ flex: 1, padding: "6px 2px", fontSize: "10px", height: "32px", borderTopRightRadius: 0, borderBottomRightRadius: 0 }} 
-                      disabled={!qrDataUrl} 
-                      onClick={handleDownloadPNG}
-                    >
-                      PNG
-                    </button>
+                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: "8px", position: "relative", width: "100%" }}>
+                  {/* First row: Copy Button and PNG Button with quality dropdown */}
+                  <div style={{ display: "flex", flexDirection: "row", gap: "8px", position: "relative", width: "100%" }}>
+                    
+                    {/* Copy Button */}
                     <button
-                      type="button"
-                      className="btn btn-primary"
+                      id="btn-qr-copy-mobile"
+                      className="btn btn-secondary"
                       style={{
-                        padding: "0 6px",
+                        flex: 1,
+                        padding: "6px 8px",
+                        fontSize: "12px",
                         height: "32px",
-                        borderTopLeftRadius: 0,
-                        borderBottomLeftRadius: 0,
-                        borderLeft: "1px solid rgba(255, 255, 255, 0.2)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "4px"
                       }}
                       disabled={!qrDataUrl}
-                      onClick={() => setIsMobileQualityOpen(!isMobileQualityOpen)}
+                      onClick={handleCopyPNG}
                     >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <polyline points="6 9 12 15 18 9" />
-                      </svg>
+                      <Copy size={13} />
+                      <span>Copy</span>
                     </button>
-                    {isMobileQualityOpen && (
-                      <div
-                        className="custom-dropdown-menu"
-                        style={{
-                          position: "absolute",
-                          bottom: "calc(100% + 6px)",
-                          right: 0,
-                          zIndex: 1000,
-                          width: "140px",
-                          background: "var(--bg-card)",
-                          border: "1px solid var(--border-default)",
-                          borderRadius: "var(--radius-md)",
-                          padding: "4px",
-                          boxShadow: "var(--shadow-lg)",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "2px",
-                        }}
+
+                    {/* PNG split dropdown button */}
+                    <div style={{ display: "flex", flex: 1, position: "relative" }}>
+                      <button 
+                        id="btn-qr-dl-png-mobile"
+                        className="btn btn-primary" 
+                        style={{ 
+                          flex: 1, 
+                          padding: "6px 8px", 
+                          fontSize: "12px", 
+                          height: "32px", 
+                          borderTopRightRadius: 0, 
+                          borderBottomRightRadius: 0,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis"
+                        }} 
+                        disabled={!qrDataUrl} 
+                        onClick={handleDownloadPNG}
                       >
-                        {PNG_SIZES.map((size) => (
-                          <button
-                            key={size}
-                            type="button"
-                            className={`custom-dropdown-item ${customStyle.downloadSize === size ? "selected" : ""}`}
-                            style={{
-                              padding: "6px 8px",
-                              fontSize: "11px",
-                              textAlign: "left",
-                              width: "100%",
-                              background: customStyle.downloadSize === size ? "var(--bg-elevated)" : "transparent",
-                              color: "var(--text-primary)",
-                              border: "none",
-                              borderRadius: "var(--radius-sm)",
-                              cursor: "pointer",
-                            }}
-                            onClick={() => handleQualitySelect(size, true)}
-                          >
-                            {size}px {size === 2048 ? "(HD)" : ""}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                        PNG
+                      </button>
+                      <button
+                        id="btn-qr-dl-toggle-mobile"
+                        type="button"
+                        className="btn btn-primary"
+                        style={{
+                          padding: "0 8px",
+                          height: "32px",
+                          borderTopLeftRadius: 0,
+                          borderBottomLeftRadius: 0,
+                          borderLeft: "1px solid rgba(255, 255, 255, 0.2)",
+                          flexShrink: 0
+                        }}
+                        disabled={!qrDataUrl}
+                        onClick={() => setIsMobileQualityOpen(!isMobileQualityOpen)}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </button>
+                      {isMobileQualityOpen && (
+                        <div
+                          className="custom-dropdown-menu"
+                          style={{
+                            position: "absolute",
+                            bottom: "calc(100% + 6px)",
+                            top: "auto",
+                            right: 0,
+                            zIndex: 1000,
+                            width: "160px",
+                            background: "var(--bg-card)",
+                            border: "1px solid var(--border-default)",
+                            borderRadius: "var(--radius-md)",
+                            padding: "4px",
+                            boxShadow: "var(--shadow-lg)",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "2px",
+                          }}
+                        >
+                          <div style={{ fontSize: "9px", fontWeight: 700, color: "var(--text-tertiary)", padding: "4px 8px", textTransform: "uppercase" }}>PNG Quality</div>
+                          {PNG_SIZES.map((size) => (
+                            <button
+                              key={size}
+                              type="button"
+                              className={`custom-dropdown-item ${customStyle.downloadSize === size ? "selected" : ""}`}
+                              style={{
+                                padding: "6px 8px",
+                                fontSize: "11px",
+                                textAlign: "left",
+                                width: "100%",
+                                background: customStyle.downloadSize === size ? "var(--bg-elevated)" : "transparent",
+                                color: "var(--text-primary)",
+                                border: "none",
+                                borderRadius: "var(--radius-sm)",
+                                cursor: "pointer",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center"
+                              }}
+                              onClick={() => handleQualitySelect(size, true)}
+                            >
+                              <span>{size} x {size} px</span>
+                              {size === 2048 && <span style={{ fontSize: "8px", background: "var(--accent-blue-muted)", color: "var(--accent-blue)", padding: "1px 4px", borderRadius: "3px" }}>Pro</span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <button className="btn btn-secondary" style={{ flex: 1, padding: "6px 8px", fontSize: "11px", height: "32px" }} disabled={!text.trim()} onClick={handleDownloadSVG}>SVG</button>
-                  <button className="btn btn-ghost" style={{ padding: "6px 10px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center" }} disabled={!qrDataUrl} onClick={handleCopyPNG}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                    </svg>
-                  </button>
+
+                  {/* Second row: SVG Download Button and Share Button */}
+                  <div style={{ display: "flex", flexDirection: "row", gap: "8px", width: "100%" }}>
+                    <button
+                      id="btn-qr-dl-svg-mobile"
+                      className="btn btn-secondary"
+                      style={{
+                        flex: 1,
+                        padding: "6px 8px",
+                        fontSize: "12px",
+                        height: "32px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "4px"
+                      }}
+                      disabled={!text.trim()}
+                      onClick={handleDownloadSVG}
+                    >
+                      <Download size={13} />
+                      <span>SVG</span>
+                    </button>
+                    <button
+                      id="btn-qr-share-mobile"
+                      className="btn btn-secondary"
+                      style={{
+                        flex: 1,
+                        padding: "6px 8px",
+                        fontSize: "12px",
+                        height: "32px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "4px"
+                      }}
+                      disabled={!qrDataUrl}
+                      onClick={handleShareQR}
+                    >
+                      <Share2 size={13} />
+                      <span>Share</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3031,6 +3359,84 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                 )}
               </div>
 
+              {/* QR Border Styling sub-section */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, borderTop: "1px solid var(--border-subtle)", paddingTop: 14 }}>
+                <div className="section-sub-header" style={{ marginBottom: 6 }}>
+                  <span className="section-sub-title">QR Code Border Outline</span>
+                  <div className="section-sub-line" />
+                </div>
+                
+                <CustomDropdown
+                  label="QR Border Type"
+                  value={customStyle.qrBorderType}
+                  onChange={(val) => setCustomStyle((p) => ({ ...p, qrBorderType: val }))}
+                  direction="up"
+                  options={[
+                    { value: "none", label: "No Border", description: "Default layout, no outer boundary outline wraps the QR matrix." },
+                    { value: "solid", label: "Solid Border", description: "Wraps the QR code in a clean, solid color outline." },
+                    { value: "dashed", label: "Dashed Border", description: "Outline with dash segments." },
+                    { value: "dotted", label: "Dotted Border", description: "Outline composed of dotted elements." },
+                    { value: "double", label: "Double Border", description: "Elegant double-ring outline wrapping the QR." },
+                  ]}
+                />
+
+                {customStyle.qrBorderType !== "none" && (
+                  <>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Border Outline Color</label>
+                      <div className="color-picker-row">
+                        <input
+                          type="color"
+                          className="color-swatch-input"
+                          value={customStyle.qrBorderColor}
+                          onChange={(e) => setCustomStyle((p) => ({ ...p, qrBorderColor: e.target.value }))}
+                        />
+                        <input
+                          type="text"
+                          className="form-input color-hex-input"
+                          value={customStyle.qrBorderColor}
+                          onChange={(e) => setCustomStyle((p) => ({ ...p, qrBorderColor: e.target.value }))}
+                          maxLength={7}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="responsive-grid-2">
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">Border Thickness ({customStyle.qrBorderSize}px)</label>
+                        <div className="slider-row">
+                          <input
+                            type="range"
+                            className="form-slider"
+                            min={2}
+                            max={20}
+                            step={1}
+                            value={customStyle.qrBorderSize}
+                            onChange={(e) => setCustomStyle((p) => ({ ...p, qrBorderSize: Number(e.target.value) }))}
+                          />
+                          <span className="slider-value">{customStyle.qrBorderSize}px</span>
+                        </div>
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">Border Corner Radius ({customStyle.qrBorderRadius}px)</label>
+                        <div className="slider-row">
+                          <input
+                            type="range"
+                            className="form-slider"
+                            min={0}
+                            max={40}
+                            step={2}
+                            value={customStyle.qrBorderRadius}
+                            onChange={(e) => setCustomStyle((p) => ({ ...p, qrBorderRadius: Number(e.target.value) }))}
+                          />
+                          <span className="slider-value">{customStyle.qrBorderRadius}px</span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
             </div>
           )}
         </div>
@@ -3523,6 +3929,7 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                         style={{
                           position: "absolute",
                           bottom: "calc(100% + 6px)",
+                          top: "auto",
                           right: 0,
                           zIndex: 1000,
                           width: "180px",
@@ -3573,6 +3980,17 @@ export default function QRGenerator({ onGenerate, showToast, userEmail, onLoginC
                     onClick={handleDownloadSVG}
                   >
                     Download SVG
+                  </button>
+                  <button
+                    id="btn-qr-share"
+                    className="btn btn-secondary"
+                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                    disabled={!qrDataUrl}
+                    onClick={handleShareQR}
+                    title="Share QR Link & Image"
+                  >
+                    <Share2 size={14} />
+                    <span>Share</span>
                   </button>
                   <button
                     id="btn-qr-copy"

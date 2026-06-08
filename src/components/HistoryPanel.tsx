@@ -3,6 +3,7 @@
 import { QRHistoryEntry } from "@/types";
 import { Toast } from "@/hooks/useToast";
 import { ActiveTab } from "@/app/page";
+import { Clock, Copy, X } from "lucide-react";
 
 interface HistoryPanelProps {
   history: QRHistoryEntry[];
@@ -63,17 +64,10 @@ export default function HistoryPanel({
       <div className="card-body">
         {history.length === 0 ? (
           <div className="qr-empty-state" style={{ padding: "48px 24px" }}>
-            <svg
+            <Clock
               className="qr-empty-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
               style={{ width: 48, height: 48 }}
-            >
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 8 12 12 14 14" />
-            </svg>
+            />
             <p className="qr-empty-text" style={{ maxWidth: "260px" }}>
               No QR codes in your history yet. Start by generating one!
             </p>
@@ -135,17 +129,7 @@ export default function HistoryPanel({
                     data-tooltip="Copy Image"
                     style={{ padding: "0 8px" }}
                   >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                    </svg>
+                    <Copy size={14} />
                   </button>
 
                   <button
@@ -164,7 +148,7 @@ export default function HistoryPanel({
                     }}
                     style={{ padding: "0 8px", color: "var(--accent-red)" }}
                   >
-                    ✕
+                    <X size={14} />
                   </button>
                 </div>
               </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useToast } from "@/hooks/useToast";
+import { X } from "lucide-react";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -37,8 +38,8 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>
-          ✕
+        <button className="modal-close" onClick={onClose} aria-label="Close modal">
+          <X size={18} />
         </button>
         <h2 className="modal-title">{isLoginTab ? "Welcome Back" : "Create Account"}</h2>
         <p className="modal-desc">
